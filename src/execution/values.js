@@ -20,7 +20,10 @@ import { isInputType, isNonNullType } from '../type/definition';
 
 import { typeFromAST } from '../utilities/typeFromAST';
 import { valueFromAST } from '../utilities/valueFromAST';
-import { coerceInputValue } from '../utilities/coerceInputValue';
+import {
+  coerceInputValue,
+  coerceDefaultValue,
+} from '../utilities/coerceInputValue';
 
 type CoercedVariableValues =
   | {| errors: $ReadOnlyArray<GraphQLError> |}
@@ -174,7 +177,7 @@ export function getArgumentValues(
 
     if (!argumentNode) {
       if (argDef.defaultValue !== undefined) {
-        coercedValues[name] = argDef.defaultValue;
+        coercedValues[name] = coerceDefaultValue(argDef);
       } else if (isNonNullType(argType)) {
         throw new GraphQLError(
           `Argument "${name}" of required type "${inspect(argType)}" ` +
@@ -195,7 +198,7 @@ export function getArgumentValues(
         !hasOwnProperty(variableValues, variableName)
       ) {
         if (argDef.defaultValue !== undefined) {
-          coercedValues[name] = argDef.defaultValue;
+          coercedValues[name] = coerceDefaultValue(argDef);
         } else if (isNonNullType(argType)) {
           throw new GraphQLError(
             `Argument "${name}" of required type "${inspect(argType)}" ` +

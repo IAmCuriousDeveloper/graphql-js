@@ -1,4 +1,12 @@
+import type { Path } from '../jsutils/Path';
+import { addPath, pathToArray } from '../jsutils/Path';
+import { didYouMean } from '../jsutils/didYouMean';
 import { inspect } from '../jsutils/inspect';
+import { invariant } from '../jsutils/invariant';
+import { isIterableObject } from '../jsutils/isIterableObject';
+import { isObjectLike } from '../jsutils/isObjectLike';
+import { printPathArray } from '../jsutils/printPathArray';
+import { suggestionList } from '../jsutils/suggestionList';
 
 import { GraphQLError } from '../error/GraphQLError';
 import { locatedError } from '../error/locatedError';
@@ -20,18 +28,22 @@ import type {
   GraphQLUnionType,
   GraphQLEnumType,
   GraphQLInputObjectType,
+  GraphQLInputType,
 } from './definition';
 import { assertSchema } from './schema';
 import { isIntrospectionType } from './introspection';
 import { isDirective, GraphQLDeprecatedDirective } from './directives';
 import {
+  getNamedType,
   isObjectType,
   isInterfaceType,
   isUnionType,
   isEnumType,
   isInputObjectType,
   isNamedType,
+  isListType,
   isNonNullType,
+  isLeafType,
   isInputType,
   isOutputType,
   isRequiredArgument,
@@ -190,6 +202,15 @@ function validateDirectives(context: SchemaValidationContext): void {
           ],
         );
       }
+
+      if (arg.defaultValue !== undefined) {
+        validateDefaultValue(arg.defaultValue, arg.type).forEach((error) => {
+          context.reportError(
+            `Argument @${directive.name}(${arg.name}:) has invalid default value: ${error}`,
+            arg.astNode?.defaultValue,
+          );
+        });
+      }
     }
   }
 }
@@ -305,6 +326,15 @@ function validateFields(
             arg.astNode?.type,
           ],
         );
+      }
+
+      if (arg.defaultValue !== undefined) {
+        validateDefaultValue(arg.defaultValue, arg.type).forEach((error) => {
+          context.reportError(
+            `Argument ${type.name}.${field.name}(${argName}:) has invalid default value: ${error}`,
+            arg.astNode?.defaultValue,
+          );
+        });
       }
     }
   }
@@ -528,7 +558,7 @@ function validateInputFields(
     );
   }
 
-  // Ensure the arguments are valid
+  // Ensure the input fields are valid
   for (const field of fields) {
     // Ensure they are named correctly.
     validateName(context, field);
@@ -551,6 +581,15 @@ function validateInputFields(
           field.astNode?.type,
         ],
       );
+    }
+
+    if (field.defaultValue !== undefined) {
+      validateDefaultValue(field.defaultValue, field.type).forEach((error) => {
+        context.reportError(
+          `Input field ${inputObj.name}.${field.name} has invalid default value: ${error}`,
+          field.astNode?.defaultValue,
+        );
+      });
     }
   }
 }
@@ -584,27 +623,41 @@ function createInputObjectCircularRefsValidator(
 
     const fields = Object.values(inputObj.getFields());
     for (const field of fields) {
-      if (isNonNullType(field.type) && isInputObjectType(field.type.ofType)) {
-        const fieldType = field.type.ofType;
-        const cycleIndex = fieldPathIndexByTypeName[fieldType.name];
+      const fieldType = getNamedType(field.type);
+      if (isInputObjectType(fieldType)) {
+        const isNonNullField =
+          isNonNullType(field.type) && field.type.ofType === fieldType;
+        if (isNonNullField || !isEmptyValue(field.defaultValue)) {
+          const cycleIndex = fieldPathIndexByTypeName[fieldType.name];
 
-        fieldPath.push(field);
-        if (cycleIndex === undefined) {
-          detectCycleRecursive(fieldType);
-        } else {
-          const cyclePath = fieldPath.slice(cycleIndex);
-          const pathStr = cyclePath.map((fieldObj) => fieldObj.name).join('.');
-          context.reportError(
-            `Cannot reference Input Object "${fieldType.name}" within itself through a series of non-null fields: "${pathStr}".`,
-            cyclePath.map((fieldObj) => fieldObj.astNode),
-          );
+          fieldPath.push(field);
+          if (cycleIndex === undefined) {
+            detectCycleRecursive(fieldType);
+          } else {
+            const cyclePath = fieldPath.slice(cycleIndex);
+            const pathStr = cyclePath
+              .map((fieldObj) => fieldObj.name)
+              .join('.');
+            context.reportError(
+              `Cannot reference Input Object "${
+                fieldType.name
+              }" within itself through a series of ${
+                isNonNullField ? 'non-null fields' : 'non-empty default values'
+              }: "${pathStr}".`,
+              cyclePath.map((fieldObj) => fieldObj.astNode),
+            );
+          }
+          fieldPath.pop();
         }
-        fieldPath.pop();
       }
     }
 
     fieldPathIndexByTypeName[inputObj.name] = undefined;
   }
+}
+
+function isEmptyValue(value: mixed) {
+  return value == null || (Array.isArray(value) && value.length === 0);
 }
 
 function getAllImplementsInterfaceNodes(
@@ -642,4 +695,127 @@ function getDeprecatedDirectiveNode(
   return definitionNode?.directives?.find(
     (node) => node.name.value === GraphQLDeprecatedDirective.name,
   );
+}
+
+/**
+ * Coerce an internal JavaScript value given a GraphQL Input Type.
+ */
+function validateDefaultValue(
+  inputValue: mixed,
+  type: GraphQLInputType,
+  path?: Path,
+): Array<string> {
+  if (isNonNullType(type)) {
+    if (inputValue !== null) {
+      return validateDefaultValue(inputValue, type.ofType, path);
+    }
+    return invalidDefaultValue(
+      `Expected non-nullable type "${inspect(type)}" not to be null.`,
+      path,
+    );
+  }
+
+  if (inputValue === null) {
+    return [];
+  }
+
+  if (isListType(type)) {
+    const itemType = type.ofType;
+    if (isIterableObject(inputValue)) {
+      const errors = [];
+      Array.from(inputValue).forEach((itemValue, index) => {
+        errors.push(
+          ...validateDefaultValue(
+            itemValue,
+            itemType,
+            addPath(path, index, undefined),
+          ),
+        );
+      });
+      return errors;
+    }
+    // Lists accept a non-list value as a list of one.
+    return validateDefaultValue(inputValue, itemType, path);
+  }
+
+  if (isInputObjectType(type)) {
+    if (!isObjectLike(inputValue)) {
+      return invalidDefaultValue(
+        `Expected type "${type.name}" to be an object.`,
+        path,
+      );
+    }
+
+    const errors = [];
+    const fieldDefs = type.getFields();
+
+    for (const field of Object.values(fieldDefs)) {
+      const fieldPath = addPath(path, field.name, type.name);
+      const fieldValue = inputValue[field.name];
+
+      if (fieldValue === undefined) {
+        if (field.defaultValue === undefined && isNonNullType(field.type)) {
+          return invalidDefaultValue(
+            `Field "${field.name}" of required type "${inspect(
+              field.type,
+            )}" was not provided.`,
+            fieldPath,
+          );
+        }
+        continue;
+      }
+
+      errors.push(...validateDefaultValue(fieldValue, field.type, fieldPath));
+    }
+
+    // Ensure every provided field is defined.
+    for (const fieldName of Object.keys(inputValue)) {
+      if (!fieldDefs[fieldName]) {
+        const suggestions = suggestionList(
+          fieldName,
+          Object.keys(type.getFields()),
+        );
+        errors.push(
+          ...invalidDefaultValue(
+            `Field "${fieldName}" is not defined by type "${type.name}".` +
+              didYouMean(suggestions),
+            path,
+          ),
+        );
+      }
+    }
+    return errors;
+  }
+
+  // istanbul ignore else (See: 'https://github.com/graphql/graphql-js/issues/2618')
+  if (isLeafType(type)) {
+    let parseResult;
+    let caughtError;
+
+    // Scalars and Enums determine if a input value is valid via serialize(),
+    // which can throw to indicate failure. If it throws, maintain a reference
+    // to the original error.
+    try {
+      parseResult = type.serialize(inputValue);
+    } catch (error) {
+      caughtError = error;
+    }
+    if (parseResult === undefined) {
+      return invalidDefaultValue(
+        caughtError?.message ?? `Expected type "${type.name}".`,
+        path,
+      );
+    }
+    return [];
+  }
+
+  // istanbul ignore next (Not reachable. All possible input types have been considered)
+  invariant(false, 'Unexpected input type: ' + inspect((type: empty)));
+}
+
+function invalidDefaultValue(message, path) {
+  return [
+    (path ? `(at defaultValue${printPathArray(pathToArray(path))}) ` : '') +
+      message,
+  ];
 }

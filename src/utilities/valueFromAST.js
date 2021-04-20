@@ -14,6 +14,7 @@ import {
   isNonNullType,
 } from '../type/definition';
 
+import { coerceDefaultValue } from './coerceInputValue';
 import { literalToValue } from './literalToValue';
 import { replaceASTVariables } from './replaceASTVariables';
 
@@ -115,7 +116,7 @@ export function valueFromAST(
       const fieldNode = fieldNodes[field.name];
       if (!fieldNode || isMissingVariable(fieldNode.value, variables)) {
         if (field.defaultValue !== undefined) {
-          coercedObj[field.name] = field.defaultValue;
+          coercedObj[field.name] = coerceDefaultValue(field);
         } else if (isNonNullType(field.type)) {
           return; // Invalid: intentionally return no value.
         }

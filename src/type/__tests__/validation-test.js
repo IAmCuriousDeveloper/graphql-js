@@ -867,6 +867,104 @@ describe('Type System: Input Objects must have fields', () => {
     ]);
   });
 
+  it('rejects Input Objects with default value circular reference', () => {
+    const validSchema = buildSchema(`
+      type Query {
+        field(arg1: A, arg2: B): String
+      }
+
+      input A {
+        x: A = null
+        y: A = { x: null, y: null }
+        z: [A] = []
+      }
+
+      input B {
+        x: B2 = {}
+      }
+
+      input B2 {
+        x: B3 = {}
+      }
+
+      input B3 {
+        x: B = { x: { x: null } }
+      }
+    `);
+
+    expect(validateSchema(validSchema)).to.deep.equal([]);
+
+    const invalidSchema = buildSchema(`
+      type Query {
+        field(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E): String
+      }
+
+      input A {
+        x: A = {}
+      }
+
+      input B {
+        x: B2 = {}
+      }
+
+      input B2 {
+        x: B3 = {}
+      }
+
+      input B3 {
+        x: B = {}
+      }
+
+      input C {
+        x: [C] = [{}]
+      }
+
+      input D {
+        x: D = { x: { x: {} } }
+      }
+
+      input E {
+        x: E = { x: null }
+        y: E = { y: null }
+      }
+    `);
+
+    expect(validateSchema(invalidSchema)).to.deep.equal([
+      {
+        message:
+          'Cannot reference Input Object field A.x within itself through a series of default values: A.x.',
+        locations: [{ line: 7, column: 16 }],
+      },
+      {
+        message:
+          'Cannot reference Input Object field B.x within itself through a series of default values: B.x, B2.x, B3.x.',
+        locations: [
+          { line: 11, column: 17 },
+          { line: 15, column: 17 },
+          { line: 19, column: 16 },
+        ],
+      },
+      {
+        message:
+          'Cannot reference Input Object field C.x within itself through a series of default values: C.x.',
+        locations: [{ line: 23, column: 18 }],
+      },
+      {
+        message:
+          'Cannot reference Input Object field D.x within itself through a series of default values: D.x.',
+        locations: [{ line: 27, column: 16 }],
+      },
+      {
+        message:
+          'Cannot reference Input Object field E.x within itself through a series of default values: E.x, E.y.',
+        locations: [
+          { line: 31, column: 16 },
+          { line: 32, column: 16 },
+        ],
+      },
+    ]);
+  });
+
   it('rejects an Input Object type with incorrectly typed fields', () => {
     const schema = buildSchema(`
       type Query {

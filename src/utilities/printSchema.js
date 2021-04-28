@@ -258,10 +258,9 @@ function printArgs(
 }
 
 function printInputValue(arg: GraphQLInputField): string {
-  const defaultAST = astFromValue(arg.defaultValue, arg.type);
   let argDecl = arg.name + ': ' + String(arg.type);
-  if (defaultAST) {
-    argDecl += ` = ${print(defaultAST)}`;
+  if (arg.defaultValue !== undefined) {
+    argDecl += ` = ${print(astFromValue(arg.defaultValue, arg.type))}`;
   }
   return argDecl + printDeprecated(arg.deprecationReason);
 }

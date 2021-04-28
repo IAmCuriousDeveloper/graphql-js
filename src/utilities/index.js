@@ -85,6 +85,9 @@ export { literalToValue } from './literalToValue';
 // Coerces a JavaScript value to a GraphQL type, or produces errors.
 export { coerceInputValue } from './coerceInputValue';
 
+// Validate a JavaScript value with a GraphQL type, collecting all errors.
+export { validateInputValue } from './validateInputValue';
+
 // Concatenates multiple AST together.
 export { concatAST } from './concatAST';
 

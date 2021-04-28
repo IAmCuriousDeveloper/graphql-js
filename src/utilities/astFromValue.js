@@ -1,5 +1,4 @@
 import { inspect } from '../jsutils/inspect';
-import { invariant } from '../jsutils/invariant';
 import { isObjectLike } from '../jsutils/isObjectLike';
 import { isIterableObject } from '../jsutils/isIterableObject';
 
@@ -9,134 +8,98 @@ import { Kind } from '../language/kinds';
 import type { GraphQLInputType } from '../type/definition';
 import { GraphQLID } from '../type/scalars';
 import {
-  isLeafType,
+  getNamedType,
   isEnumType,
   isInputObjectType,
-  isListType,
-  isNonNullType,
 } from '../type/definition';
 
 /**
  * Produces a GraphQL Value AST given a JavaScript object.
- * Function will match JavaScript/JSON values to GraphQL AST schema format
+ * Function will match JavaScript values to GraphQL AST schema format
  * by using suggested GraphQLInputType. For example:
  *
  *     astFromValue("value", GraphQLString)
  *
- * A GraphQL type must be provided, which will be used to interpret different
+ * A GraphQL type may be provided, which will be used to interpret different
  * JavaScript values.
  *
- * | JSON Value    | GraphQL Value        |
- * | ------------- | -------------------- |
- * | Object        | Input Object         |
- * | Array         | List                 |
- * | Boolean       | Boolean              |
- * | String        | String / Enum Value  |
- * | Number        | Int / Float          |
- * | Mixed         | Enum Value           |
- * | null          | NullValue            |
+ * | JavaScript Value  | GraphQL Value        |
+ * | ----------------- | -------------------- |
+ * | Object            | Input Object         |
+ * | Array             | List                 |
+ * | Boolean           | Boolean              |
+ * | String            | String / Enum Value  |
+ * | Number            | Int / Float          |
+ * | null / undefined  | NullValue            |
  *
+ * Note: This function does not perform any type validation or coercion.
  */
-export function astFromValue(value: mixed, type: GraphQLInputType): ?ValueNode {
-  if (isNonNullType(type)) {
-    const astValue = astFromValue(value, type.ofType);
-    if (astValue?.kind === Kind.NULL) {
-      return null;
-    }
-    return astValue;
-  }
-
-  // only explicit null, not undefined, NaN
-  if (value === null) {
+export function astFromValue(value: mixed, type?: GraphQLInputType): ValueNode {
+  // Like JSON, a null literal is produced for null and undefined.
+  if (value == null) {
     return { kind: Kind.NULL };
   }
 
-  // undefined
-  if (value === undefined) {
-    return null;
-  }
+  const namedType = type && getNamedType(type);
 
-  // Convert JavaScript array to GraphQL list. If the GraphQLType is a list, but
-  // the value is not an array, convert the value using the list's item type.
-  if (isListType(type)) {
-    const itemType = type.ofType;
-    if (isIterableObject(value)) {
-      const valuesNodes = [];
-      for (const item of value) {
-        const itemNode = astFromValue(item, itemType);
-        if (itemNode != null) {
-          valuesNodes.push(itemNode);
-        }
-      }
-      return { kind: Kind.LIST, values: valuesNodes };
-    }
-    return astFromValue(value, itemType);
+  // Convert JavaScript array to GraphQL list.
+  if (isIterableObject(value)) {
+    return {
+      kind: Kind.LIST,
+      values: Array.from(value, (item) => astFromValue(item, namedType)),
+    };
   }
 
   // Populate the fields of the input object by creating ASTs from each value
   // in the JavaScript object according to the fields in the input type.
-  if (isInputObjectType(type)) {
-    if (!isObjectLike(value)) {
-      return null;
-    }
-    const fieldNodes = [];
-    for (const field of Object.values(type.getFields())) {
-      const fieldValue = astFromValue(value[field.name], field.type);
-      if (fieldValue) {
-        fieldNodes.push({
-          kind: Kind.OBJECT_FIELD,
-          name: { kind: Kind.NAME, value: field.name },
-          value: fieldValue,
-        });
-      }
-    }
-    return { kind: Kind.OBJECT, fields: fieldNodes };
+  if (isObjectLike(value)) {
+    const fieldDefs =
+      namedType && isInputObjectType(namedType) && namedType.getFields();
+    return {
+      kind: Kind.OBJECT,
+      fields: Object.keys(value).map((fieldName) => ({
+        kind: Kind.OBJECT_FIELD,
+        name: { kind: Kind.NAME, value: fieldName },
+        value: astFromValue(value[fieldName], fieldDefs?.[fieldName]?.type),
+      })),
+    };
   }
 
-  // istanbul ignore else (See: 'https://github.com/graphql/graphql-js/issues/2618')
-  if (isLeafType(type)) {
-    // Since value is an internally represented value, it must be serialized
-    // to an externally represented value before converting into an AST.
-    const serialized = type.serialize(value);
-    if (serialized == null) {
-      return null;
-    }
-
-    // Others serialize based on their corresponding JavaScript scalar types.
-    if (typeof serialized === 'boolean') {
-      return { kind: Kind.BOOLEAN, value: serialized };
-    }
-
-    // JavaScript numbers can be Int or Float values.
-    if (typeof serialized === 'number' && Number.isFinite(serialized)) {
-      const stringNum = String(serialized);
-      return integerStringRegExp.test(stringNum)
-        ? { kind: Kind.INT, value: stringNum }
-        : { kind: Kind.FLOAT, value: stringNum };
-    }
-
-    if (typeof serialized === 'string') {
-      // Enum types use Enum literals.
-      if (isEnumType(type)) {
-        return { kind: Kind.ENUM, value: serialized };
-      }
-
-      // ID types can use Int literals.
-      if (type === GraphQLID && integerStringRegExp.test(serialized)) {
-        return { kind: Kind.INT, value: serialized };
-      }
-
-      return {
-        kind: Kind.STRING,
-        value: serialized,
-      };
-    }
-
-    throw new TypeError(`Cannot convert value to AST: ${inspect(serialized)}.`);
+  // Others serialize based on their corresponding JavaScript scalar types.
+  if (typeof value === 'boolean') {
+    return { kind: Kind.BOOLEAN, value };
   }
 
-  // istanbul ignore next (Not reachable. All possible input types have been considered)
-  invariant(false, 'Unexpected input type: ' + inspect((type: empty)));
+  // JavaScript numbers can be Int or Float values.
+  if (typeof value === 'number') {
+    // Like JSON, a null literal is produced for non-finite values.
+    if (!Number.isFinite(value)) {
+      return { kind: Kind.NULL };
+    }
+    const stringNum = String(value);
+    return integerStringRegExp.test(stringNum)
+      ? { kind: Kind.INT, value: stringNum }
+      : { kind: Kind.FLOAT, value: stringNum };
+  }
+
+  if (typeof value === 'string') {
+    // Enum types use Enum literals.
+    if (isEnumType(namedType) && nameRegExp.test(value)) {
+      return { kind: Kind.ENUM, value };
+    }
+
+    // ID types can use Int literals.
+    if (namedType === GraphQLID && integerStringRegExp.test(value)) {
+      return { kind: Kind.INT, value };
+    }
+
+    return {
+      kind: Kind.STRING,
+      value,
+    };
+  }
+
+  throw new TypeError(`Cannot convert value to AST: ${inspect(value)}.`);
 }
 
 /**
@@ -145,3 +108,6 @@ export function astFromValue(value: mixed, type: GraphQLInputType): ?ValueNode {
  *   - NegativeSign? NonZeroDigit ( Digit+ )?
  */
 const integerStringRegExp = /^-?(?:0|[1-9][0-9]*)$/;
+
+// https://spec.graphql.org/draft/#Name
+const nameRegExp = /^[_a-zA-Z][_a-zA-Z0-9]*$/;

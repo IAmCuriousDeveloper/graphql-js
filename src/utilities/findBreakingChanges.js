@@ -536,8 +536,6 @@ function typeKindName(type: GraphQLNamedType): string {
 
 function stringifyValue(value: mixed, type: GraphQLInputType): string {
   const ast = astFromValue(value, type);
-  invariant(ast != null);
-
   const sortedAST = visit(ast, {
     ObjectValue(objectNode) {
       // Make a copy since sort mutates array

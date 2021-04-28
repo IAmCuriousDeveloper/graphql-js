@@ -47,7 +47,7 @@ import type {
   IntrospectionTypeRef,
   IntrospectionNamedTypeRef,
 } from './getIntrospectionQuery';
-import { valueFromAST } from './valueFromAST';
+import { valueFromASTUntyped } from './valueFromASTUntyped';
 
 /**
  * Build a GraphQLSchema for use by client tools.
@@ -369,7 +369,7 @@ export function buildClientSchema(
 
     const defaultValue =
       inputValueIntrospection.defaultValue != null
-        ? valueFromAST(parseValue(inputValueIntrospection.defaultValue), type)
+        ? valueFromASTUntyped(parseValue(inputValueIntrospection.defaultValue))
         : undefined;
     return {
       description: inputValueIntrospection.description,

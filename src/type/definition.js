@@ -13,6 +13,7 @@ import { devAssert } from '../jsutils/devAssert';
 import { keyValMap } from '../jsutils/keyValMap';
 import { instanceOf } from '../jsutils/instanceOf';
 import { didYouMean } from '../jsutils/didYouMean';
+import { isIterableObject } from '../jsutils/isIterableObject';
 import { isObjectLike } from '../jsutils/isObjectLike';
 import { identityFunc } from '../jsutils/identityFunc';
 import { suggestionList } from '../jsutils/suggestionList';
@@ -848,7 +849,10 @@ export function defineArguments(
     name: argName,
     description: argConfig.description,
     type: argConfig.type,
-    defaultValue: argConfig.defaultValue,
+    defaultValue: uncoerceDefaultValue(
+      argConfig.defaultValue,
+      argConfig.type,
+    ),
     deprecationReason: argConfig.deprecationReason,
     extensions: argConfig.extensions && toObjMap(argConfig.extensions),
     astNode: argConfig.astNode,
@@ -1510,7 +1514,10 @@ export class GraphQLInputObjectType {
 
   getFields(): GraphQLInputFieldMap {
     if (typeof this._fields === 'function') {
-      this._fields = this._fields();
+      const _fields = this._fields;
+      // Assign before call to avoid potential infinite recursion.
+      this._fields = {};
+      this._fields = _fields();
     }
     return this._fields;
   }
@@ -1566,7 +1573,10 @@ function defineInputFieldMap(
       name: fieldName,
       description: fieldConfig.description,
       type: fieldConfig.type,
-      defaultValue: fieldConfig.defaultValue,
+      defaultValue: uncoerceDefaultValue(
+        fieldConfig.defaultValue,
+        fieldConfig.type,
+      ),
       deprecationReason: fieldConfig.deprecationReason,
       extensions: fieldConfig.extensions && toObjMap(fieldConfig.extensions),
       astNode: fieldConfig.astNode,
@@ -1618,3 +1628,61 @@ export function isRequiredInputField(
 }
 
 export type GraphQLInputFieldMap = ObjMap<GraphQLInputField>;
+
+/**
+ * Historically GraphQL.js allowed default values to be provided as
+ * assumed-coerced "internal" values, however default values should be provided
+ * as "external" pre-coerced values. `uncoerceDefaultValue()` will convert such
+ * "internal" values to "external" values to avoid breaking existing clients.
+ *
+ * This performs the opposite of `coerceInputValue()`. Given an "internal"
+ * coerced value, reverse the process to provide an "external" uncoerced value.
+ *
+ * This function should not throw Errors on incorrectly shaped input. Instead
+ * it will simply pass through such values directly.
+ *
+ */
+function uncoerceDefaultValue(value: mixed, type: GraphQLInputType): mixed {
+  // Explicitly return the value null.
+  if (value === null) {
+    return null;
+  }
+
+  // Unwrap type
+  const namedType = getNamedType(type);
+
+  if (isIterableObject(value)) {
+    return Array.from(value, (itemValue) =>
+      uncoerceDefaultValue(itemValue, namedType),
+    );
+  }
+
+  if (isInputObjectType(namedType)) {
+    if (!isObjectLike(value)) {
+      return value;
+    }
+
+    const fieldDefs = namedType.getFields();
+    return mapValue(value, (fieldValue, fieldName) =>
+      fieldName in fieldDefs
+        ? uncoerceDefaultValue(fieldValue, fieldDefs[fieldName].type)
+        : fieldValue,
+    );
+  }
+
+  if (isLeafType(namedType)) {
+    try {
+      // For leaf types (Scalars, Enums), serialize is the oppose of coercion
+      // (parseValue) and will produce an "external" value.
+      return namedType.serialize(value);
+    } catch (error) {
+      // Ingore any invalid data errors.
+      // istanbul ignore next - serialize should only throw GraphQLError
+      if (!(error instanceof GraphQLError)) {
+        throw error;
+      }
+    }
+  }
+
+  return value;
+}

@@ -80,7 +80,7 @@ import {
   GraphQLInputObjectType,
 } from '../type/definition';
 
-import { valueFromAST } from './valueFromAST';
+import { valueFromASTUntyped } from './valueFromASTUntyped';
 
 type Options = {|
   ...GraphQLSchemaValidationOptions,
@@ -496,7 +496,10 @@ export function extendSchemaImpl(
       argConfigMap[arg.name.value] = {
         type,
         description: arg.description?.value,
-        defaultValue: valueFromAST(arg.defaultValue, type),
+        defaultValue:
+          arg.defaultValue != null
+            ? valueFromASTUntyped(arg.defaultValue)
+            : undefined,
         deprecationReason: getDeprecationReason(arg),
         astNode: arg,
       };
@@ -523,7 +526,10 @@ export function extendSchemaImpl(
         inputFieldMap[field.name.value] = {
           type,
           description: field.description?.value,
-          defaultValue: valueFromAST(field.defaultValue, type),
+          defaultValue:
+            field.defaultValue != null
+              ? valueFromASTUntyped(field.defaultValue)
+              : undefined,
           deprecationReason: getDeprecationReason(field),
           astNode: field,
         };

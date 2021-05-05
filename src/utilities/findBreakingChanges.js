@@ -33,7 +33,7 @@ import {
   isRequiredInputField,
 } from '../type/definition';
 
-import { astFromValue } from './astFromValue';
+import { valueToLiteral } from './valueToLiteral';
 
 export const BreakingChangeType = Object.freeze({
   TYPE_REMOVED: 'TYPE_REMOVED',
@@ -535,7 +535,7 @@ function typeKindName(type: GraphQLNamedType): string {
 }
 
 function stringifyValue(value: mixed, type: GraphQLInputType): string {
-  const ast = astFromValue(value, type);
+  const ast = valueToLiteral(value, type);
   const sortedAST = visit(ast, {
     ObjectValue(objectNode) {
       // Make a copy since sort mutates array

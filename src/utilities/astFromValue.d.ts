@@ -19,6 +19,7 @@ import { GraphQLInputType } from '../type/definition';
  * | Mixed         | Enum Value           |
  * | null          | NullValue            |
  *
+ * @deprecated use valueToLiteral()
  */
 export function astFromValue(
   value: unknown,

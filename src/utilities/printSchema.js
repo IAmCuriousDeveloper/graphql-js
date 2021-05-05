@@ -32,7 +32,7 @@ import {
   isInputObjectType,
 } from '../type/definition';
 
-import { astFromValue } from './astFromValue';
+import { valueToLiteral } from './valueToLiteral';
 
 export function printSchema(schema: GraphQLSchema): string {
   return printFilteredSchema(
@@ -260,7 +260,7 @@ function printArgs(
 function printInputValue(arg: GraphQLInputField): string {
   let argDecl = arg.name + ': ' + String(arg.type);
   if (arg.defaultValue !== undefined) {
-    argDecl += ` = ${print(astFromValue(arg.defaultValue, arg.type))}`;
+    argDecl += ` = ${print(valueToLiteral(arg.defaultValue, arg.type))}`;
   }
   return argDecl + printDeprecated(arg.deprecationReason);
 }
@@ -281,7 +281,7 @@ function printDeprecated(reason: ?string): string {
   if (reason == null) {
     return '';
   }
-  const reasonAST = astFromValue(reason, GraphQLString);
+  const reasonAST = valueToLiteral(reason, GraphQLString);
   if (reasonAST && reason !== DEFAULT_DEPRECATION_REASON) {
     return ' @deprecated(reason: ' + print(reasonAST) + ')';
   }
@@ -292,12 +292,7 @@ function printSpecifiedByURL(scalar: GraphQLScalarType): string {
   if (scalar.specifiedByURL == null) {
     return '';
   }
-  const url = scalar.specifiedByURL;
-  const urlAST = astFromValue(url, GraphQLString);
-  invariant(
-    urlAST,
-    'Unexpected null value returned from `astFromValue` for specifiedByURL',
-  );
+  const urlAST = valueToLiteral(scalar.specifiedByURL, GraphQLString);
   return ' @specifiedBy(url: ' + print(urlAST) + ')';
 }
 

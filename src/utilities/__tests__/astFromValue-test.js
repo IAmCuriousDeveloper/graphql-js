@@ -1,3 +1,5 @@
+/* eslint-disable import/no-deprecated */
+
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
@@ -18,24 +20,16 @@ import {
 
 import { astFromValue } from '../astFromValue';
 
-describe('astFromValue', () => {
-  it('converts null values to ASTs', () => {
-    expect(astFromValue(null, GraphQLBoolean)).to.deep.equal({
-      kind: 'NullValue',
-    });
+import { expectWarning } from './expectWarning';
 
-    // Note: undefined values are represented as null.
-    expect(astFromValue(undefined, GraphQLBoolean)).to.deep.equal({
-      kind: 'NullValue',
-    });
+describe('astFromValue', () => {
+  it('warns about deprecation', () => {
+    expectWarning(() => astFromValue(true, GraphQLBoolean)).to.equal(
+      'DEPRECATION WARNING: The function "astFromValue" is deprecated and may be removed in a future version. Use valueToLiteral().',
+    );
   });
 
   it('converts boolean values to ASTs', () => {
-    expect(astFromValue(true)).to.deep.equal({
-      kind: 'BooleanValue',
-      value: true,
-    });
-
     expect(astFromValue(true, GraphQLBoolean)).to.deep.equal({
       kind: 'BooleanValue',
       value: true,
@@ -46,19 +40,30 @@ describe('astFromValue', () => {
       value: false,
     });
 
-    // Note: no type checking or coercion.
+    expect(astFromValue(undefined, GraphQLBoolean)).to.deep.equal(null);
+
+    expect(astFromValue(null, GraphQLBoolean)).to.deep.equal({
+      kind: 'NullValue',
+    });
+
     expect(astFromValue(0, GraphQLBoolean)).to.deep.equal({
-      kind: 'IntValue',
-      value: '0',
+      kind: 'BooleanValue',
+      value: false,
+    });
+
+    expect(astFromValue(1, GraphQLBoolean)).to.deep.equal({
+      kind: 'BooleanValue',
+      value: true,
+    });
+
+    const NonNullBoolean = new GraphQLNonNull(GraphQLBoolean);
+    expect(astFromValue(0, NonNullBoolean)).to.deep.equal({
+      kind: 'BooleanValue',
+      value: false,
     });
   });
 
   it('converts Int values to Int ASTs', () => {
-    expect(astFromValue(-1)).to.deep.equal({
-      kind: 'IntValue',
-      value: '-1',
-    });
-
     expect(astFromValue(-1, GraphQLInt)).to.deep.equal({
       kind: 'IntValue',
       value: '-1',
@@ -76,24 +81,18 @@ describe('astFromValue', () => {
 
     // GraphQL spec does not allow coercing non-integer values to Int to avoid
     // accidental data loss.
-    expect(astFromValue(123.5, GraphQLInt)).to.deep.equal({
-      kind: 'FloatValue',
-      value: '123.5',
-    });
+    expect(() => astFromValue(123.5, GraphQLInt)).to.throw(
+      'Int cannot represent non-integer value: 123.5',
+    );
 
-    // Note: no type checking or coercion.
-    expect(astFromValue(1e40, GraphQLInt)).to.deep.equal({
-      kind: 'FloatValue',
-      value: '1e+40',
-    });
+    // Note: outside the bounds of 32bit signed int.
+    expect(() => astFromValue(1e40, GraphQLInt)).to.throw(
+      'Int cannot represent non 32-bit signed integer value: 1e+40',
+    );
 
-    expect(astFromValue(NaN, GraphQLInt)).to.deep.equal({
-      kind: 'NullValue',
-    });
-
-    expect(astFromValue(Infinity, GraphQLInt)).to.deep.equal({
-      kind: 'NullValue',
-    });
+    expect(() => astFromValue(NaN, GraphQLInt)).to.throw(
+      'Int cannot represent non-integer value: NaN',
+    );
   });
 
   it('converts Float values to Int/Float ASTs', () => {
@@ -139,17 +138,21 @@ describe('astFromValue', () => {
       value: 'VA\nLUE',
     });
 
-    // Note: no type checking or coercion.
     expect(astFromValue(123, GraphQLString)).to.deep.equal({
-      kind: 'IntValue',
+      kind: 'StringValue',
       value: '123',
     });
 
-    // Note: no type checking or coercion.
     expect(astFromValue(false, GraphQLString)).to.deep.equal({
-      kind: 'BooleanValue',
-      value: false,
+      kind: 'StringValue',
+      value: 'false',
     });
+
+    expect(astFromValue(null, GraphQLString)).to.deep.equal({
+      kind: 'NullValue',
+    });
+
+    expect(astFromValue(undefined, GraphQLString)).to.deep.equal(null);
   });
 
   it('converts ID values to Int/String ASTs', () => {
@@ -189,38 +192,62 @@ describe('astFromValue', () => {
       kind: 'StringValue',
       value: '01',
     });
+
+    expect(() => astFromValue(false, GraphQLID)).to.throw(
+      'ID cannot represent value: false',
+    );
+
+    expect(astFromValue(null, GraphQLID)).to.deep.equal({ kind: 'NullValue' });
+
+    expect(astFromValue(undefined, GraphQLID)).to.deep.equal(null);
   });
 
-  it('ignores custom scalar types, passing through values directly', () => {
-    const customScalar = new GraphQLScalarType({
-      name: 'CustomScale',
+  it('converts using serialize from a custom scalar type', () => {
+    const passthroughScalar = new GraphQLScalarType({
+      name: 'PassthroughScalar',
       serialize(value) {
         return value;
       },
     });
 
-    expect(astFromValue('value', customScalar)).to.deep.equal({
+    expect(astFromValue('value', passthroughScalar)).to.deep.equal({
       kind: 'StringValue',
       value: 'value',
     });
 
-    expect(astFromValue({ field: 'value' }, customScalar)).to.deep.equal({
-      kind: 'ObjectValue',
-      fields: [
-        {
-          kind: 'ObjectField',
-          name: { kind: 'Name', value: 'field' },
-          value: { kind: 'StringValue', value: 'value' },
-        },
-      ],
+    expect(() => astFromValue(NaN, passthroughScalar)).to.throw(
+      'Cannot convert value to AST: NaN.',
+    );
+    expect(() => astFromValue(Infinity, passthroughScalar)).to.throw(
+      'Cannot convert value to AST: Infinity.',
+    );
+
+    const returnNullScalar = new GraphQLScalarType({
+      name: 'ReturnNullScalar',
+      serialize() {
+        return null;
+      },
     });
+
+    expect(astFromValue('value', returnNullScalar)).to.equal(null);
+
+    class SomeClass {}
+
+    const returnCustomClassScalar = new GraphQLScalarType({
+      name: 'ReturnCustomClassScalar',
+      serialize() {
+        return new SomeClass();
+      },
+    });
+
+    expect(() => astFromValue('value', returnCustomClassScalar)).to.throw(
+      'Cannot convert value to AST: {}.',
+    );
   });
 
-  it('ignores NonNull types when producing NullValue', () => {
+  it('does not converts NonNull values to NullValue', () => {
     const NonNullBoolean = new GraphQLNonNull(GraphQLBoolean);
-    expect(astFromValue(null, NonNullBoolean)).to.deep.equal({
-      kind: 'NullValue',
-    });
+    expect(astFromValue(null, NonNullBoolean)).to.deep.equal(null);
   });
 
   const complexValue = { someArbitrary: 'complexValue' };
@@ -240,22 +267,20 @@ describe('astFromValue', () => {
       value: 'HELLO',
     });
 
-    expect(astFromValue('COMPLEX', myEnum)).to.deep.equal({
+    expect(astFromValue(complexValue, myEnum)).to.deep.equal({
       kind: 'EnumValue',
       value: 'COMPLEX',
     });
 
-    // Note: no validation or coercion
-    expect(astFromValue('hello', myEnum)).to.deep.equal({
-      kind: 'EnumValue',
-      value: 'hello',
-    });
+    // Note: case sensitive
+    expect(() => astFromValue('hello', myEnum)).to.throw(
+      'Enum "MyEnum" cannot represent value: "hello"',
+    );
 
-    // Non-names are string value
-    expect(astFromValue('hello friend', myEnum)).to.deep.equal({
-      kind: 'StringValue',
-      value: 'hello friend',
-    });
+    // Note: Not a valid enum value
+    expect(() => astFromValue('UNKNOWN_VALUE', myEnum)).to.throw(
+      'Enum "MyEnum" cannot represent value: "UNKNOWN_VALUE"',
+    );
   });
 
   it('converts array values to List ASTs', () => {
@@ -304,7 +329,7 @@ describe('astFromValue', () => {
     });
   });
 
-  it('retains indicies in arrays, not performing type validation', () => {
+  it('skip invalid list items', () => {
     const ast = astFromValue(
       ['FOO', null, 'BAR'],
       new GraphQLList(new GraphQLNonNull(GraphQLString)),
@@ -314,7 +339,6 @@ describe('astFromValue', () => {
       kind: 'ListValue',
       values: [
         { kind: 'StringValue', value: 'FOO' },
-        { kind: 'NullValue' },
         { kind: 'StringValue', value: 'BAR' },
       ],
     });
@@ -359,10 +383,7 @@ describe('astFromValue', () => {
     });
   });
 
-  it('does not perform type validation for mis-matched types', () => {
-    expect(astFromValue(5, inputObj)).to.deep.equal({
-      kind: 'IntValue',
-      value: '5',
-    });
+  it('does not converts non-object values as input objects', () => {
+    expect(astFromValue(5, inputObj)).to.equal(null);
   });
 });

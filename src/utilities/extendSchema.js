@@ -80,7 +80,7 @@ import {
   GraphQLInputObjectType,
 } from '../type/definition';
 
-import { valueFromASTUntyped } from './valueFromASTUntyped';
+import { literalToValue } from './literalToValue';
 
 type Options = {|
   ...GraphQLSchemaValidationOptions,
@@ -498,7 +498,7 @@ export function extendSchemaImpl(
         description: arg.description?.value,
         defaultValue:
           arg.defaultValue != null
-            ? valueFromASTUntyped(arg.defaultValue)
+            ? literalToValue(arg.defaultValue, type)
             : undefined,
         deprecationReason: getDeprecationReason(arg),
         astNode: arg,
@@ -528,7 +528,7 @@ export function extendSchemaImpl(
           description: field.description?.value,
           defaultValue:
             field.defaultValue != null
-              ? valueFromASTUntyped(field.defaultValue)
+              ? literalToValue(field.defaultValue, type)
               : undefined,
           deprecationReason: getDeprecationReason(field),
           astNode: field,

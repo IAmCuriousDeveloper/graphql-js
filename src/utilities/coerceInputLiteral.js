@@ -15,6 +15,8 @@ import {
 } from '../type/definition';
 
 import { coerceDefaultValue } from './coerceInputValue';
+import { literalToValue } from './literalToValue';
+import { replaceASTVariables } from './replaceASTVariables';
 
 /**
  * Produces a coerced "internal" JavaScript value given a GraphQL Value AST.

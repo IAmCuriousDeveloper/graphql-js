@@ -23,6 +23,7 @@ import { GraphQLInputType } from '../type/definition';
  * | Enum Value           | Mixed         |
  * | NullValue            | null          |
  *
+ * @deprecated use coerceInputLiteral
  */
 export function valueFromAST(
   valueNode: Maybe<ValueNode>,

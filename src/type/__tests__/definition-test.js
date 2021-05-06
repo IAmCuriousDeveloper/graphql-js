@@ -14,7 +14,6 @@ import {
   GraphQLEnumType,
   GraphQLInputObjectType,
 } from '../definition';
-import { coerceInputLiteral } from '../../utilities/coerceInputLiteral';
 
 const ScalarType = new GraphQLScalarType({ name: 'Scalar' });
 const ObjectType = new GraphQLObjectType({ name: 'Object', fields: {} });

@@ -849,10 +849,7 @@ export function defineArguments(
     name: argName,
     description: argConfig.description,
     type: argConfig.type,
-    defaultValue: uncoerceDefaultValue(
-      argConfig.defaultValue,
-      argConfig.type,
-    ),
+    defaultValue: uncoerceDefaultValue(argConfig.defaultValue, argConfig.type),
     deprecationReason: argConfig.deprecationReason,
     extensions: argConfig.extensions && toObjMap(argConfig.extensions),
     astNode: argConfig.astNode,

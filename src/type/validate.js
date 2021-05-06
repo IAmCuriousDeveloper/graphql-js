@@ -196,7 +196,7 @@ function validateDirectives(context: SchemaValidationContext): void {
       }
 
       if (arg.defaultValue !== undefined) {
-        validateInputValue(arg.defaultValue, arg.type, (error, value, path) => {
+        validateInputValue(arg.defaultValue, arg.type, (path, value, error) => {
           const coord = `@${directive.name}(${arg.name}:)`;
           context.reportError(
             `Argument ${coord} has invalid default value ${inspect(value)}` +
@@ -324,7 +324,7 @@ function validateFields(
       }
 
       if (arg.defaultValue !== undefined) {
-        validateInputValue(arg.defaultValue, arg.type, (error, value, path) => {
+        validateInputValue(arg.defaultValue, arg.type, (path, value, error) => {
           const coord = `${type.name}.${field.name}(${argName}:)`;
           context.reportError(
             `Argument ${coord} has invalid default value ${inspect(value)}` +
@@ -585,7 +585,7 @@ function validateInputFields(
       validateInputValue(
         field.defaultValue,
         field.type,
-        (error, value, path) => {
+        (path, value, error) => {
           const coord = `${inputObj.name}.${field.name}`;
           context.reportError(
             `Input field ${coord} has invalid default value ${inspect(value)}` +
@@ -609,6 +609,8 @@ function createInputObjectCircularRefsValidator(
 
   // Array of types nodes used to produce meaningful errors
   const fieldPath = [];
+  const fieldCoordinatePath = [];
+  const fieldDefaultValuePath = [];
 
   // Position in the type path
   const fieldPathIndex = Object.create(null);
@@ -688,11 +690,10 @@ function createInputObjectCircularRefsValidator(
         // Check to see if there is cycle.
         const cycleIndex = fieldPathIndex[fieldCoordinate];
         if (cycleIndex >= 0) {
-          const cyclePath = fieldPath.slice(cycleIndex);
-          const pathStr = cyclePath.map(([coord]) => coord).join(', ');
+          const pathStr = fieldCoordinatePath.slice(cycleIndex).join(', ');
           context.reportError(
             `Cannot reference Input Object field ${fieldCoordinate} within itself through a series of default values: ${pathStr}.`,
-            cyclePath.map(([, astNode]) => astNode),
+            fieldDefaultValuePath.slice(cycleIndex),
           );
           continue;
         }
@@ -701,9 +702,11 @@ function createInputObjectCircularRefsValidator(
         if (!visitedTypes[fieldCoordinate]) {
           visitedTypes[fieldCoordinate] = true;
           fieldPathIndex[fieldCoordinate] = fieldPath.length;
-          fieldPath.push([fieldCoordinate, field.astNode?.defaultValue]);
+          fieldCoordinatePath.push(fieldCoordinate);
+          fieldDefaultValuePath.push(field.astNode?.defaultValue);
           detectDefaultValueCycle(fieldType, field.defaultValue);
-          fieldPath.pop();
+          fieldCoordinatePath.pop();
+          fieldDefaultValuePath.pop();
           fieldPathIndex[fieldCoordinate] = undefined;
         }
       }

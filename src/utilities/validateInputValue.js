@@ -9,6 +9,7 @@ import { suggestionList } from '../jsutils/suggestionList';
 
 import { GraphQLError } from '../error/GraphQLError';
 
+import type { GraphQLInputType } from '../type/definition';
 import {
   isInputObjectType,
   isListType,
@@ -130,12 +131,14 @@ function validateInputValueImpl(
     try {
       result = type.parseValue(inputValue);
     } catch (error) {
+      if (error instanceof GraphQLError) {
+        onError(pathToArray(path), inputValue, error);
+        return;
+      }
       caughtError = error;
     }
 
-    if (caughtError instanceof GraphQLError) {
-      onError(pathToArray(path), inputValue, caughtError);
-    } else if (result === undefined) {
+    if (result === undefined) {
       reportInvalidValue(
         onError,
         `Expected type "${type.name}".` +
@@ -156,7 +159,7 @@ function reportInvalidValue(
   message: string,
   value: mixed,
   path: Path | void,
-  originalError?: GraphQLError,
+  originalError?: ?GraphQLError,
 ): void {
   onError(
     pathToArray(path),

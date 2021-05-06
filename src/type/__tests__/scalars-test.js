@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import { parseValue as parseValueToAST } from '../../language/parser';
+import { parseConstValue } from '../../language/parser';
 
 import {
   GraphQLID,
@@ -66,7 +66,8 @@ describe('Type System: Specified scalar types', () => {
 
     it('parseLiteral', () => {
       function parseLiteral(str: string) {
-        return GraphQLInt.parseLiteral(parseValueToAST(str), undefined);
+        // $FlowExpectedError[not-a-function]
+        return GraphQLInt.parseLiteral(parseConstValue(str));
       }
 
       expect(parseLiteral('1')).to.equal(1);
@@ -103,9 +104,6 @@ describe('Type System: Specified scalar types', () => {
       );
       expect(() => parseLiteral('ENUM_VALUE')).to.throw(
         'Int cannot represent non-integer value: ENUM_VALUE',
-      );
-      expect(() => parseLiteral('$var')).to.throw(
-        'Int cannot represent non-integer value: $var',
       );
     });
 
@@ -231,7 +229,8 @@ describe('Type System: Specified scalar types', () => {
 
     it('parseLiteral', () => {
       function parseLiteral(str: string) {
-        return GraphQLFloat.parseLiteral(parseValueToAST(str), undefined);
+        // $FlowExpectedError[not-a-function]
+        return GraphQLFloat.parseLiteral(parseConstValue(str));
       }
 
       expect(parseLiteral('1')).to.equal(1);
@@ -263,9 +262,6 @@ describe('Type System: Specified scalar types', () => {
       );
       expect(() => parseLiteral('ENUM_VALUE')).to.throw(
         'Float cannot represent non numeric value: ENUM_VALUE',
-      );
-      expect(() => parseLiteral('$var')).to.throw(
-        'Float cannot represent non numeric value: $var',
       );
     });
 
@@ -344,7 +340,8 @@ describe('Type System: Specified scalar types', () => {
 
     it('parseLiteral', () => {
       function parseLiteral(str: string) {
-        return GraphQLString.parseLiteral(parseValueToAST(str), undefined);
+        // $FlowExpectedError[not-a-function]
+        return GraphQLString.parseLiteral(parseConstValue(str));
       }
 
       expect(parseLiteral('"foo"')).to.equal('foo');
@@ -370,9 +367,6 @@ describe('Type System: Specified scalar types', () => {
       );
       expect(() => parseLiteral('ENUM_VALUE')).to.throw(
         'String cannot represent a non string value: ENUM_VALUE',
-      );
-      expect(() => parseLiteral('$var')).to.throw(
-        'String cannot represent a non string value: $var',
       );
     });
 
@@ -456,7 +450,8 @@ describe('Type System: Specified scalar types', () => {
 
     it('parseLiteral', () => {
       function parseLiteral(str: string) {
-        return GraphQLBoolean.parseLiteral(parseValueToAST(str), undefined);
+        // $FlowExpectedError[not-a-function]
+        return GraphQLBoolean.parseLiteral(parseConstValue(str));
       }
 
       expect(parseLiteral('true')).to.equal(true);
@@ -488,9 +483,6 @@ describe('Type System: Specified scalar types', () => {
       );
       expect(() => parseLiteral('ENUM_VALUE')).to.throw(
         'Boolean cannot represent a non boolean value: ENUM_VALUE',
-      );
-      expect(() => parseLiteral('$var')).to.throw(
-        'Boolean cannot represent a non boolean value: $var',
       );
     });
 
@@ -571,7 +563,8 @@ describe('Type System: Specified scalar types', () => {
 
     it('parseLiteral', () => {
       function parseLiteral(str: string) {
-        return GraphQLID.parseLiteral(parseValueToAST(str), undefined);
+        // $FlowExpectedError[not-a-function]
+        return GraphQLID.parseLiteral(parseConstValue(str));
       }
 
       expect(parseLiteral('""')).to.equal('');
@@ -603,9 +596,6 @@ describe('Type System: Specified scalar types', () => {
       );
       expect(() => parseLiteral('ENUM_VALUE')).to.throw(
         'ID cannot represent a non-string and non-integer value: ENUM_VALUE',
-      );
-      expect(() => parseLiteral('$var')).to.throw(
-        'ID cannot represent a non-string and non-integer value: $var',
       );
     });
 

@@ -5,6 +5,7 @@ import type { ObjMap } from '../../jsutils/ObjMap';
 import { invariant } from '../../jsutils/invariant';
 import { identityFunc } from '../../jsutils/identityFunc';
 
+import { print } from '../../language/printer';
 import { parseValue } from '../../language/parser';
 
 import type { GraphQLInputType } from '../../type/definition';
@@ -73,6 +74,19 @@ describe('valueFromAST', () => {
     });
 
     expectValueFrom('"value"', passthroughScalar).to.equal('value');
+
+    const graphqlScalar = new GraphQLScalarType({
+      name: 'GraphQLScalar',
+      parseLiteral(node) {
+        return print(node);
+      },
+      parseValue: identityFunc,
+    });
+
+    expectValueFrom('"value"', graphqlScalar).to.equal('"value"');
+    expectValueFrom('{field: $var}', graphqlScalar, { var: 'value' }).to.equal(
+      '{field: "value"}',
+    );
 
     const throwScalar = new GraphQLScalarType({
       name: 'ThrowScalar',

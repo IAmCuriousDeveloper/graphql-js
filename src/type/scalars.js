@@ -1,6 +1,7 @@
 import { inspect } from '../jsutils/inspect';
 import { isObjectLike } from '../jsutils/isObjectLike';
 
+import type { ConstValueNode } from '../language/ast';
 import { Kind } from '../language/kinds';
 import { print } from '../language/printer';
 
@@ -267,6 +268,21 @@ export const GraphQLID: GraphQLScalarType = new GraphQLScalarType({
       );
     }
     return valueNode.value;
+  },
+  valueToLiteral(value: mixed): ?ConstValueNode {
+    // ID types can use Int literals.
+    if (typeof value === 'string') {
+      if (/^-?(?:0|[1-9][0-9]*)$/.test(value)) {
+        return { kind: Kind.INT, value };
+      }
+      return { kind: Kind.STRING, value };
+    }
+  },
+  literalToValue(valueNode: ConstValueNode): mixed {
+    // ID Int literals are represented as string values.
+    if (valueNode.kind === Kind.INT || valueNode.kind === Kind.STRING) {
+      return valueNode.value;
+    }
   },
 });
 

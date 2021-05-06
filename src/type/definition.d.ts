@@ -22,7 +22,7 @@ import {
   OperationDefinitionNode,
   FieldNode,
   FragmentDefinitionNode,
-  ValueNode,
+  ConstValueNode,
   ScalarTypeExtensionNode,
   UnionTypeExtensionNode,
   EnumTypeExtensionNode,
@@ -315,7 +315,9 @@ export class GraphQLScalarType {
   specifiedByURL: Maybe<string>;
   serialize: GraphQLScalarSerializer<unknown>;
   parseValue: GraphQLScalarValueParser<unknown>;
-  parseLiteral: GraphQLScalarLiteralParser<unknown>;
+  parseLiteral: Maybe<GraphQLScalarLiteralParser<unknown>>;
+  valueToLiteral: Maybe<GraphQLScalarValueToLiteral>;
+  literalToValue: Maybe<GraphQLScalarLiteralToValue>;
   extensions: Maybe<Readonly<GraphQLScalarTypeExtensions>>;
   astNode: Maybe<ScalarTypeDefinitionNode>;
   extensionASTNodes: ReadonlyArray<ScalarTypeExtensionNode>;
@@ -326,7 +328,9 @@ export class GraphQLScalarType {
     specifiedByURL: Maybe<string>;
     serialize: GraphQLScalarSerializer<unknown>;
     parseValue: GraphQLScalarValueParser<unknown>;
-    parseLiteral: GraphQLScalarLiteralParser<unknown>;
+    parseLiteral: Maybe<GraphQLScalarLiteralParser<unknown>>;
+    valueToLiteral: Maybe<GraphQLScalarValueToLiteral>;
+    literalToValue: Maybe<GraphQLScalarLiteralToValue>;
     extensions: Maybe<Readonly<GraphQLScalarTypeExtensions>>;
     extensionASTNodes: ReadonlyArray<ScalarTypeExtensionNode>;
   };
@@ -343,9 +347,14 @@ export type GraphQLScalarValueParser<TInternal> = (
   value: unknown,
 ) => Maybe<TInternal>;
 export type GraphQLScalarLiteralParser<TInternal> = (
-  valueNode: ValueNode,
-  variables: Maybe<ObjMap<unknown>>,
+  valueNode: ConstValueNode,
 ) => Maybe<TInternal>;
+export type GraphQLScalarValueToLiteral = (
+  inputValue: unknown,
+) => Maybe<ConstValueNode>;
+export type GraphQLScalarLiteralToValue = (
+  valueNode: ConstValueNode,
+) => unknown;
 
 export interface GraphQLScalarTypeConfig<TInternal, TExternal> {
   name: string;
@@ -357,6 +366,10 @@ export interface GraphQLScalarTypeConfig<TInternal, TExternal> {
   parseValue?: GraphQLScalarValueParser<TInternal>;
   // Parses an externally provided literal value to use as an input.
   parseLiteral?: GraphQLScalarLiteralParser<TInternal>;
+  // Translates an external input value to a literal (AST).
+  valueToLiteral?: Maybe<GraphQLScalarValueToLiteral>;
+  // Translates a literal (AST) to external input value.
+  literalToValue?: Maybe<GraphQLScalarLiteralToValue>;
   extensions?: Maybe<Readonly<GraphQLScalarTypeExtensions>>;
   astNode?: Maybe<ScalarTypeDefinitionNode>;
   extensionASTNodes?: Maybe<ReadonlyArray<ScalarTypeExtensionNode>>;
@@ -782,10 +795,9 @@ export class GraphQLEnumType {
   getValue(name: string): Maybe<GraphQLEnumValue>;
   serialize(value: unknown): Maybe<string>;
   parseValue(value: unknown): Maybe<any>;
-  parseLiteral(
-    valueNode: ValueNode,
-    _variables: Maybe<ObjMap<unknown>>,
-  ): Maybe<any>;
+  parseLiteral(valueNode: ConstValueNode): Maybe<any>;
+  valueToLiteral(value: unknown): Maybe<ConstValueNode>;
+  literalToValue(valueNode: ConstValueNode): unknown;
 
   toConfig(): GraphQLEnumTypeConfig & {
     extensions: Maybe<Readonly<GraphQLEnumTypeExtensions>>;

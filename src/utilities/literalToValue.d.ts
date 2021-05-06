@@ -1,13 +1,11 @@
-import { Maybe } from '../jsutils/Maybe';
-import { ReadOnlyObjMap } from '../jsutils/ObjMap';
-
-import { ValueNode } from '../language/ast';
+import { ConstValueNode } from '../language/ast';
+import { GraphQLInputType } from '../type/definition';
 
 /**
  * Produces a JavaScript value given a GraphQL Value AST.
  *
- * Unlike `valueFromAST()`, no type is provided. The resulting JavaScript value
- * will reflect the provided GraphQL value AST.
+ * A GraphQL type may be provided, which will be used to interpret different
+ * JavaScript values if it defines a `literalToValue` method.
  *
  * | GraphQL Value        | JavaScript Value |
  * | -------------------- | ---------------- |
@@ -18,9 +16,9 @@ import { ValueNode } from '../language/ast';
  * | Int / Float          | Number           |
  * | Null                 | null             |
  *
- * @deprecated use literalToValue
+ * Note: This function does not perform any type validation or coercion.
  */
-export function valueFromASTUntyped(
-  valueNode: ValueNode,
-  variables?: Maybe<ReadOnlyObjMap<unknown>>,
+export function literalToValue(
+  valueNode: ConstValueNode,
+  type?: GraphQLInputType,
 ): unknown;

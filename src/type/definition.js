@@ -40,11 +40,8 @@ import type {
   OperationDefinitionNode,
   FieldNode,
   FragmentDefinitionNode,
-  ValueNode,
   ConstValueNode,
 } from '../language/ast';
-
-import { valueFromASTUntyped } from '../utilities/valueFromASTUntyped';
 
 import type { GraphQLSchema } from './schema';
 
@@ -561,7 +558,9 @@ export class GraphQLScalarType {
   specifiedByURL: ?string;
   serialize: GraphQLScalarSerializer<mixed>;
   parseValue: GraphQLScalarValueParser<mixed>;
-  parseLiteral: GraphQLScalarLiteralParser<mixed>;
+  parseLiteral: ?GraphQLScalarLiteralParser<mixed>;
+  valueToLiteral: ?GraphQLScalarValueToLiteral;
+  literalToValue: ?GraphQLScalarLiteralToValue;
   extensions: ?ReadOnlyObjMap<mixed>;
   astNode: ?ScalarTypeDefinitionNode;
   extensionASTNodes: $ReadOnlyArray<ScalarTypeExtensionNode>;
@@ -573,9 +572,9 @@ export class GraphQLScalarType {
     this.specifiedByURL = config.specifiedByURL;
     this.serialize = config.serialize ?? identityFunc;
     this.parseValue = parseValue;
-    this.parseLiteral =
-      config.parseLiteral ??
-      ((node, variables) => parseValue(valueFromASTUntyped(node, variables)));
+    this.parseLiteral = config.parseLiteral;
+    this.valueToLiteral = config.valueToLiteral;
+    this.literalToValue = config.literalToValue;
     this.extensions = config.extensions && toObjMap(config.extensions);
     this.astNode = config.astNode;
     this.extensionASTNodes = config.extensionASTNodes ?? [];
@@ -611,6 +610,8 @@ export class GraphQLScalarType {
       serialize: this.serialize,
       parseValue: this.parseValue,
       parseLiteral: this.parseLiteral,
+      valueToLiteral: this.valueToLiteral,
+      literalToValue: this.literalToValue,
       extensions: this.extensions,
       astNode: this.astNode,
       extensionASTNodes: this.extensionASTNodes,
@@ -640,9 +641,14 @@ export type GraphQLScalarValueParser<TInternal> = (
 ) => ?TInternal;
 
 export type GraphQLScalarLiteralParser<TInternal> = (
-  valueNode: ValueNode,
-  variables: ?ReadOnlyObjMap<mixed>,
+  valueNode: ConstValueNode,
 ) => ?TInternal;
+
+export type GraphQLScalarValueToLiteral = (
+  inputValue: mixed,
+) => ?ConstValueNode;
+
+export type GraphQLScalarLiteralToValue = (valueNode: ConstValueNode) => mixed;
 
 export type GraphQLScalarTypeConfig<TInternal, TExternal> = {|
   name: string,
@@ -653,7 +659,11 @@ export type GraphQLScalarTypeConfig<TInternal, TExternal> = {|
   // Parses an externally provided value to use as an input.
   parseValue?: GraphQLScalarValueParser<TInternal>,
   // Parses an externally provided literal value to use as an input.
-  parseLiteral?: GraphQLScalarLiteralParser<TInternal>,
+  parseLiteral?: ?GraphQLScalarLiteralParser<TInternal>,
+  // Translates an external input value to a literal (AST).
+  valueToLiteral?: ?GraphQLScalarValueToLiteral,
+  // Translates a literal (AST) to external input value.
+  literalToValue?: ?GraphQLScalarLiteralToValue,
   extensions?: ?ReadOnlyObjMapLike<mixed>,
   astNode?: ?ScalarTypeDefinitionNode,
   extensionASTNodes?: ?$ReadOnlyArray<ScalarTypeExtensionNode>,
@@ -663,7 +673,6 @@ type GraphQLScalarTypeNormalizedConfig = {|
   ...GraphQLScalarTypeConfig<mixed, mixed>,
   serialize: GraphQLScalarSerializer<mixed>,
   parseValue: GraphQLScalarValueParser<mixed>,
-  parseLiteral: GraphQLScalarLiteralParser<mixed>,
   extensions: ?ReadOnlyObjMap<mixed>,
   extensionASTNodes: $ReadOnlyArray<ScalarTypeExtensionNode>,
 |};
@@ -1349,11 +1358,7 @@ export class GraphQLEnumType /* <T> */ {
     return enumValue.value;
   }
 
-  parseLiteral(
-    valueNode: ValueNode,
-    _variables: ?ReadOnlyObjMap<mixed>,
-  ): ?any /* T */ {
-    // Note: variables will be resolved to a value before calling this function.
+  parseLiteral(valueNode: ConstValueNode): ?any /* T */ {
     if (valueNode.kind !== Kind.ENUM) {
       const valueStr = print(valueNode);
       throw new GraphQLError(
@@ -1373,6 +1378,16 @@ export class GraphQLEnumType /* <T> */ {
       );
     }
     return enumValue.value;
+  }
+
+  valueToLiteral(value: mixed): ?ConstValueNode {
+    if (typeof value === 'string') {
+      // https://spec.graphql.org/draft/#Name
+      if (/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(value)) {
+        return { kind: Kind.ENUM, value };
+      }
+      return { kind: Kind.STRING, value };
+    }
   }
 
   toConfig(): GraphQLEnumTypeNormalizedConfig {

@@ -1,3 +1,5 @@
+/* eslint-disable import/no-deprecated */
+
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
@@ -7,12 +9,20 @@ import { parseValue } from '../../language/parser';
 
 import { valueFromASTUntyped } from '../valueFromASTUntyped';
 
+import { expectWarning } from './expectWarning';
+
 describe('valueFromASTUntyped', () => {
   function expectValueFrom(valueText: string, variables?: ?ObjMap<mixed>) {
     const ast = parseValue(valueText);
     const value = valueFromASTUntyped(ast, variables);
     return expect(value);
   }
+
+  it('warns about deprecation', () => {
+    expectWarning(() => valueFromASTUntyped(parseValue('true'))).to.equal(
+      'DEPRECATION WARNING: The function "valueFromASTUntyped" is deprecated and may be removed in a future version. Use "literalToValue".',
+    );
+  });
 
   it('parses simple values', () => {
     expectValueFrom('null').to.equal(null);

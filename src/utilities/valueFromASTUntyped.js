@@ -1,4 +1,5 @@
 import type { ReadOnlyObjMap } from '../jsutils/ObjMap';
+import { deprecationWarning } from '../jsutils/deprecationWarning';
 import { inspect } from '../jsutils/inspect';
 import { invariant } from '../jsutils/invariant';
 import { keyValMap } from '../jsutils/keyValMap';
@@ -21,11 +22,14 @@ import type { ValueNode } from '../language/ast';
  * | Int / Float          | Number           |
  * | Null                 | null             |
  *
+ * @deprecated use literalToValue
  */
 export function valueFromASTUntyped(
   valueNode: ValueNode,
   variables?: ?ReadOnlyObjMap<mixed>,
 ): mixed {
+  deprecationWarning('valueFromASTUntyped', 'Use "literalToValue".');
+
   switch (valueNode.kind) {
     case Kind.NULL:
       return null;

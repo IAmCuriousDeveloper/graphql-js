@@ -197,9 +197,11 @@ function validateDirectives(context: SchemaValidationContext): void {
 
       if (arg.defaultValue !== undefined) {
         validateInputValue(arg.defaultValue, arg.type, (path, value, error) => {
-          const coord = `@${directive.name}(${arg.name}:)`;
+          const coordinate = `@${directive.name}(${arg.name}:)`;
           context.reportError(
-            `Argument ${coord} has invalid default value ${inspect(value)}` +
+            `Argument ${coordinate} has invalid default value ${inspect(
+              value,
+            )}` +
               (path.length > 0 ? ` at value${printPathArray(path)}` : '') +
               `: ${error.message}`,
             arg.astNode?.defaultValue,
@@ -325,9 +327,11 @@ function validateFields(
 
       if (arg.defaultValue !== undefined) {
         validateInputValue(arg.defaultValue, arg.type, (path, value, error) => {
-          const coord = `${type.name}.${field.name}(${argName}:)`;
+          const coordinate = `${type.name}.${field.name}(${argName}:)`;
           context.reportError(
-            `Argument ${coord} has invalid default value ${inspect(value)}` +
+            `Argument ${coordinate} has invalid default value ${inspect(
+              value,
+            )}` +
               (path.length > 0 ? ` at value${printPathArray(path)}` : '') +
               `: ${error.message}`,
             arg.astNode?.defaultValue,
@@ -586,9 +590,11 @@ function validateInputFields(
         field.defaultValue,
         field.type,
         (path, value, error) => {
-          const coord = `${inputObj.name}.${field.name}`;
+          const coordinate = `${inputObj.name}.${field.name}`;
           context.reportError(
-            `Input field ${coord} has invalid default value ${inspect(value)}` +
+            `Input field ${coordinate} has invalid default value ${inspect(
+              value,
+            )}` +
               (path.length > 0 ? ` at value${printPathArray(path)}` : '') +
               `: ${error.message}`,
             field.astNode?.defaultValue,

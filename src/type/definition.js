@@ -1673,7 +1673,7 @@ function uncoerceDefaultValue(value: mixed, type: GraphQLInputType): mixed {
       // (parseValue) and will produce an "external" value.
       return namedType.serialize(value);
     } catch (error) {
-      // Ingore any invalid data errors.
+      // Ignore any invalid data errors.
       // istanbul ignore next - serialize should only throw GraphQLError
       if (!(error instanceof GraphQLError)) {
         throw error;

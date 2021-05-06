@@ -25,6 +25,8 @@ words:
   - sublinks
   - instanceof
   - flowtype
+  - uncoerce
+  - uncoerced
 
   # Different names used inside tests
   - Skywalker

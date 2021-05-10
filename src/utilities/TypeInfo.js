@@ -209,7 +209,7 @@ export class TypeInfo {
           }
         }
         this._argument = argDef;
-        this._defaultValueStack.push(argDef ? argDef.defaultValue : undefined);
+        this._defaultValueStack.push(argDef?.defaultValue?.value);
         this._inputTypeStack.push(isInputType(argType) ? argType : undefined);
         break;
       }
@@ -233,9 +233,7 @@ export class TypeInfo {
             inputFieldType = inputField.type;
           }
         }
-        this._defaultValueStack.push(
-          inputField ? inputField.defaultValue : undefined,
-        );
+        this._defaultValueStack.push(inputField?.defaultValue?.value);
         this._inputTypeStack.push(
           isInputType(inputFieldType) ? inputFieldType : undefined,
         );

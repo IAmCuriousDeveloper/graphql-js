@@ -82,6 +82,7 @@ export {
   GraphQLArgumentConfig,
   GraphQLArgumentExtensions,
   GraphQLInputValue,
+  GraphQLDefaultValueUsage,
   GraphQLInputValueConfig,
   GraphQLEnumTypeConfig,
   GraphQLEnumTypeExtensions,

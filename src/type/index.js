@@ -136,6 +136,7 @@ export type {
   GraphQLArgument,
   GraphQLArgumentConfig,
   GraphQLInputValue,
+  GraphQLDefaultValueUsage,
   GraphQLInputValueConfig,
   GraphQLEnumTypeConfig,
   GraphQLEnumValue,

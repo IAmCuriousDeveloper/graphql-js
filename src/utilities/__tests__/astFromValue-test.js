@@ -51,6 +51,8 @@ describe('astFromValue', () => {
       kind: 'BooleanValue',
       value: false,
     });
+
+    expect(astFromValue(null, NonNullBoolean)).to.equal(null);
   });
 
   it('converts Int values to Int ASTs', () => {

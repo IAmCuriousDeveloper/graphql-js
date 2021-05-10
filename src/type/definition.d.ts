@@ -23,6 +23,7 @@ import {
   FieldNode,
   FragmentDefinitionNode,
   ValueNode,
+  ConstValueNode,
   ScalarTypeExtensionNode,
   UnionTypeExtensionNode,
   EnumTypeExtensionNode,
@@ -575,10 +576,15 @@ export interface GraphQLInputValue<Extensions> {
   name: string;
   description: Maybe<string>;
   type: GraphQLInputType;
-  defaultValue: unknown;
+  defaultValue: Maybe<GraphQLDefaultValueUsage>;
   deprecationReason: Maybe<string>;
   extensions: Maybe<Readonly<Extensions>>;
   astNode: Maybe<InputValueDefinitionNode>;
+}
+
+export interface GraphQLDefaultValueUsage {
+  value: unknown;
+  literal: Maybe<ConstValueNode>;
 }
 
 export interface GraphQLInputValueConfig<Extensions> {

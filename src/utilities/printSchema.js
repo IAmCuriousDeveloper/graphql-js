@@ -31,8 +31,7 @@ import {
   isEnumType,
   isInputObjectType,
 } from '../type/definition';
-
-import { astFromValue } from './astFromValue';
+import { getLiteralDefaultValue } from '../type/defaultValues';
 
 export function printSchema(schema: GraphQLSchema): string {
   return printFilteredSchema(
@@ -258,10 +257,11 @@ function printArgs(
 }
 
 function printInputValue(arg: GraphQLInputField): string {
-  const defaultAST = astFromValue(arg.defaultValue, arg.type);
   let argDecl = arg.name + ': ' + String(arg.type);
-  if (defaultAST) {
-    argDecl += ` = ${print(defaultAST)}`;
+  if (arg.defaultValue) {
+    argDecl += ` = ${print(
+      getLiteralDefaultValue(arg.defaultValue, arg.type),
+    )}`;
   }
   return argDecl + printDeprecated(arg.deprecationReason);
 }

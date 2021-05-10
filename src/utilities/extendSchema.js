@@ -79,8 +79,6 @@ import {
   GraphQLInputObjectType,
 } from '../type/definition';
 
-import { valueFromAST } from './valueFromAST';
-
 type Options = {|
   ...GraphQLSchemaValidationOptions,
 
@@ -494,7 +492,7 @@ export function extendSchemaImpl(
       configMap[node.name.value] = {
         type,
         description: node.description?.value,
-        defaultValue: valueFromAST(node.defaultValue, type),
+        defaultValueLiteral: node.defaultValue,
         deprecationReason: getDeprecationReason(node),
         astNode: node,
       };

@@ -188,6 +188,21 @@ describe('valueFromAST', () => {
     );
   });
 
+  it('uses default values for unprovided fields', () => {
+    const type = new GraphQLInputObjectType({
+      name: 'TestInput',
+      fields: {
+        int: { type: GraphQLInt, defaultValue: 42 },
+        float: {
+          type: GraphQLFloat,
+          defaultValueLiteral: { kind: 'FloatValue', value: '3.14' },
+        },
+      },
+    });
+
+    expectValueFrom('{}', type).to.deep.equal({ int: 42, float: 3.14 });
+  });
+
   const testInputObj = new GraphQLInputObjectType({
     name: 'TestInput',
     fields: {

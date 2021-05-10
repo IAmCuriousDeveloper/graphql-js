@@ -3,7 +3,6 @@ import { invariant } from '../jsutils/invariant';
 
 import { print } from '../language/printer';
 import { DirectiveLocation } from '../language/directiveLocation';
-import { astFromValue } from '../utilities/astFromValue';
 
 import type { GraphQLSchema } from './schema';
 import type { GraphQLDirective } from './directives';
@@ -31,6 +30,7 @@ import {
   isNonNullType,
   isAbstractType,
 } from './definition';
+import { getLiteralDefaultValue } from './defaultValues';
 
 export const __Schema: GraphQLObjectType = new GraphQLObjectType({
   name: '__Schema',
@@ -382,11 +382,15 @@ export const __InputValue: GraphQLObjectType = new GraphQLObjectType({
         type: GraphQLString,
         description:
           'A GraphQL-formatted string representing the default value for this input value.',
-        resolve(inputValue) {
-          const { type, defaultValue } = inputValue;
-          const valueAST = astFromValue(defaultValue, type);
-          return valueAST ? print(valueAST) : null;
-        },
+        resolve: (inputValue) =>
+          inputValue.defaultValue
+            ? print(
+                getLiteralDefaultValue(
+                  inputValue.defaultValue,
+                  inputValue.type,
+                ),
+              )
+            : null,
       },
       isDeprecated: {
         type: new GraphQLNonNull(GraphQLBoolean),

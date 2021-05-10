@@ -69,6 +69,7 @@ import {
   assertNamedType,
   getNullableType,
   getNamedType,
+  defineInputValue,
 } from '../definition';
 
 const ObjectType = new GraphQLObjectType({ name: 'Object', fields: {} });
@@ -562,19 +563,14 @@ describe('Type predicates', () => {
   });
 
   describe('isRequiredInput', () => {
-    function buildArg(config: {|
+    function buildArg({
+      type,
+      defaultValue,
+    }: {|
       type: GraphQLInputType,
       defaultValue?: mixed,
     |}): GraphQLArgument {
-      return {
-        name: 'someArg',
-        type: config.type,
-        description: undefined,
-        defaultValue: config.defaultValue,
-        deprecationReason: null,
-        extensions: undefined,
-        astNode: undefined,
-      };
+      return defineInputValue({ type, defaultValue }, 'someArg');
     }
 
     it('returns true for required arguments', () => {
@@ -608,19 +604,14 @@ describe('Type predicates', () => {
       expect(isRequiredInput(optArg4)).to.equal(false);
     });
 
-    function buildInputField(config: {|
+    function buildInputField({
+      type,
+      defaultValue,
+    }: {|
       type: GraphQLInputType,
       defaultValue?: mixed,
     |}): GraphQLInputField {
-      return {
-        name: 'someInputField',
-        type: config.type,
-        description: undefined,
-        defaultValue: config.defaultValue,
-        deprecationReason: null,
-        extensions: undefined,
-        astNode: undefined,
-      };
+      return defineInputValue({ type, defaultValue }, 'someInputField');
     }
 
     it('returns true for required input field', () => {

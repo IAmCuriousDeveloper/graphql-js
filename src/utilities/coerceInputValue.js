@@ -17,6 +17,7 @@ import {
   isListType,
   isNonNullType,
 } from '../type/definition';
+import { getCoercedDefaultValue } from '../type/defaultValues';
 
 type OnErrorCB = (
   path: $ReadOnlyArray<string | number>,
@@ -102,8 +103,11 @@ function coerceInputValueImpl(
       const fieldValue = inputValue[field.name];
 
       if (fieldValue === undefined) {
-        if (field.defaultValue !== undefined) {
-          coercedValue[field.name] = field.defaultValue;
+        if (field.defaultValue) {
+          coercedValue[field.name] = getCoercedDefaultValue(
+            field.defaultValue,
+            field.type,
+          );
         } else if (isNonNullType(field.type)) {
           const typeStr = inspect(field.type);
           onError(

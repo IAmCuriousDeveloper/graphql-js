@@ -17,6 +17,7 @@ import type { GraphQLSchema } from '../type/schema';
 import type { GraphQLField } from '../type/definition';
 import type { GraphQLDirective } from '../type/directives';
 import { isInputType, isNonNullType } from '../type/definition';
+import { getCoercedDefaultValue } from '../type/defaultValues';
 
 import { typeFromAST } from '../utilities/typeFromAST';
 import { valueFromAST } from '../utilities/valueFromAST';
@@ -173,8 +174,11 @@ export function getArgumentValues(
     const argumentNode = argNodeMap[name];
 
     if (!argumentNode) {
-      if (argDef.defaultValue !== undefined) {
-        coercedValues[name] = argDef.defaultValue;
+      if (argDef.defaultValue) {
+        coercedValues[name] = getCoercedDefaultValue(
+          argDef.defaultValue,
+          argDef.type,
+        );
       } else if (isNonNullType(argType)) {
         throw new GraphQLError(
           `Argument "${name}" of required type "${inspect(argType)}" ` +
@@ -194,8 +198,11 @@ export function getArgumentValues(
         variableValues == null ||
         !hasOwnProperty(variableValues, variableName)
       ) {
-        if (argDef.defaultValue !== undefined) {
-          coercedValues[name] = argDef.defaultValue;
+        if (argDef.defaultValue) {
+          coercedValues[name] = getCoercedDefaultValue(
+            argDef.defaultValue,
+            argDef.type,
+          );
         } else if (isNonNullType(argType)) {
           throw new GraphQLError(
             `Argument "${name}" of required type "${inspect(argType)}" ` +

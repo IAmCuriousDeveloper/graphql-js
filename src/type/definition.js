@@ -41,6 +41,7 @@ import type {
   FieldNode,
   FragmentDefinitionNode,
   ValueNode,
+  ConstValueNode,
 } from '../language/ast';
 
 import { valueFromASTUntyped } from '../utilities/valueFromASTUntyped';
@@ -971,11 +972,22 @@ export function defineInputValue(
     !('resolve' in config),
     `${name} has a resolve property, but inputs cannot define resolvers.`,
   );
+  let defaultValue;
+  if (config.defaultValue !== undefined || config.defaultValueLiteral) {
+    devAssert(
+      config.defaultValue === undefined || !config.defaultValueLiteral,
+      `${name} has both a defaultValue and a defaultValueLiteral property, but only one must be provided.`,
+    );
+    defaultValue = {
+      value: config.defaultValue,
+      literal: config.defaultValueLiteral,
+    };
+  }
   return {
     name,
     description: config.description,
     type: config.type,
-    defaultValue: config.defaultValue,
+    defaultValue,
     deprecationReason: config.deprecationReason,
     extensions: config.extensions && toObjMap(config.extensions),
     astNode: config.astNode,
@@ -991,7 +1003,8 @@ export function inputValueToConfig(
   return {
     description: inputValue.description,
     type: inputValue.type,
-    defaultValue: inputValue.defaultValue,
+    defaultValue: inputValue.defaultValue?.value,
+    defaultValueLiteral: inputValue.defaultValue?.literal,
     deprecationReason: inputValue.deprecationReason,
     extensions: inputValue.extensions,
     astNode: inputValue.astNode,
@@ -1002,16 +1015,22 @@ export type GraphQLInputValue = {|
   name: string,
   description: ?string,
   type: GraphQLInputType,
-  defaultValue: mixed,
+  defaultValue: ?GraphQLDefaultValueUsage,
   deprecationReason: ?string,
   extensions: ?ReadOnlyObjMap<mixed>,
   astNode: ?InputValueDefinitionNode,
+|};
+
+export type GraphQLDefaultValueUsage = {|
+  value: mixed,
+  literal: ?ConstValueNode,
 |};
 
 export type GraphQLInputValueConfig = {|
   description?: ?string,
   type: GraphQLInputType,
   defaultValue?: mixed,
+  defaultValueLiteral?: ?ConstValueNode,
   deprecationReason?: ?string,
   extensions?: ?ReadOnlyObjMapLike<mixed>,
   astNode?: ?InputValueDefinitionNode,

@@ -2,10 +2,21 @@ import { ConstValueNode } from '../language/ast';
 import { GraphQLInputType } from '../type/definition';
 
 /**
- * Produces a JavaScript value given a GraphQL Value AST.
+ * Produces a JavaScript value given a GraphQL Value AST and a GraphQL type.
  *
- * A GraphQL type may be provided, which will be used to interpret different
- * JavaScript values if it defines a `literalToValue` method.
+ * Scalar types are converted by calling the `literalToValue` method on that
+ * type, otherwise the default scalar `literalToValue` method is used, defined
+ * below.
+ *
+ * Note: This function does not perform any coercion.
+ */
+export function literalToValue(
+  valueNode: ConstValueNode,
+  type: GraphQLInputType,
+): unknown;
+
+/**
+ * The default implementation to convert scalar literals to values.
  *
  * | GraphQL Value        | JavaScript Value |
  * | -------------------- | ---------------- |
@@ -16,9 +27,6 @@ import { GraphQLInputType } from '../type/definition';
  * | Int / Float          | Number           |
  * | Null                 | null             |
  *
- * Note: This function does not perform any type validation or coercion.
+ * @internal
  */
-export function literalToValue(
-  valueNode: ConstValueNode,
-  type?: GraphQLInputType,
-): unknown;
+export function defaultScalarLiteralToValue(valueNode: ConstValueNode): unknown;

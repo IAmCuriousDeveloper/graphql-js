@@ -16,7 +16,7 @@ import {
 import type { VariableValues } from '../execution/values';
 
 import { literalToValue } from './literalToValue';
-import { replaceASTVariables } from './replaceASTVariables';
+import { replaceVariables } from './replaceVariables';
 
 /**
  * Produces a JavaScript value given a GraphQL Value AST.
@@ -138,7 +138,7 @@ export function valueFromAST(
 
   // istanbul ignore else (See: 'https://github.com/graphql/graphql-js/issues/2618')
   if (isLeafType(type)) {
-    const constValueNode = replaceASTVariables(valueNode, variables);
+    const constValueNode = replaceVariables(valueNode, variables);
 
     // Scalars and Enums fulfill parsing a literal value via parseLiteral().
     // Invalid values represent a failure to parse correctly, in which case

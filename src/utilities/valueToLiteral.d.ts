@@ -1,28 +1,34 @@
+import { Maybe } from '../jsutils/Maybe';
+
 import { ConstValueNode } from '../language/ast';
 import { GraphQLInputType } from '../type/definition';
 
 /**
- * Produces a GraphQL Value AST given a JavaScript object.
- * Function will match JavaScript values to GraphQL AST schema format
- * by using suggested GraphQLInputType. For example:
+ * Produces a GraphQL Value AST given a JavaScript value and a GraphQL type.
  *
- *     valueToLiteral("value", GraphQLString)
+ * Scalar types are converted by calling the `valueToLiteral` method on that
+ * type, otherwise the default scalar `valueToLiteral` method is used, defined
+ * below.
  *
- * A GraphQL type may be provided, which will be used to interpret different
- * JavaScript values if it defines a `valueToLiteral` method.
+ * Note: This function does not perform any coercion.
+ */
+export function valueToLiteral(
+  value: unknown,
+  type: GraphQLInputType,
+): Maybe<ConstValueNode>;
+
+/**
+ * The default implementation to convert scalar values to literals.
  *
  * | JavaScript Value  | GraphQL Value        |
  * | ----------------- | -------------------- |
  * | Object            | Input Object         |
  * | Array             | List                 |
  * | Boolean           | Boolean              |
- * | String            | String Value         |
+ * | String            | String               |
  * | Number            | Int / Float          |
- * | null / undefined  | NullValue            |
+ * | null / undefined  | Null                 |
  *
- * Note: This function does not perform any type validation or coercion.
+ * @internal
  */
-export function valueToLiteral(
-  value: unknown,
-  type?: GraphQLInputType,
-): ConstValueNode;
+export function defaultScalarValueToLiteral(value: unknown): ConstValueNode;

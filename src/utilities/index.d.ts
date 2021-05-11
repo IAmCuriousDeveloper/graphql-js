@@ -76,7 +76,7 @@ export { astFromValue } from './astFromValue';
 export { TypeInfo, visitWithTypeInfo } from './TypeInfo';
 
 // Converts a value to a const value by replacing variables.
-export { replaceASTVariables } from './replaceASTVariables';
+export { replaceVariables } from './replaceVariables';
 
 // Create a GraphQL Literal AST from a JavaScript input value.
 export { valueToLiteral } from './valueToLiteral';

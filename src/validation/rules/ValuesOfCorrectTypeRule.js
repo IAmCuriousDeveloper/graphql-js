@@ -21,7 +21,7 @@ import {
 
 import type { ValidationContext } from '../ValidationContext';
 import { literalToValue } from '../../utilities/literalToValue';
-import { replaceASTVariables } from '../../utilities/replaceASTVariables';
+import { replaceVariables } from '../../utilities/replaceVariables';
 
 /**
  * Value literals of correct type
@@ -123,7 +123,7 @@ function isValidValueNode(context: ValidationContext, node: ValueNode): void {
     return;
   }
 
-  const constValueNode = replaceASTVariables(node, undefined /* variables */);
+  const constValueNode = replaceVariables(node, undefined /* variables */);
 
   // Scalars and Enums determine if a literal value is valid via parseLiteral(),
   // or parseValue() which may throw or return an invalid value to indicate

@@ -408,7 +408,7 @@ export {
   TypeInfo,
   visitWithTypeInfo,
   // Converts a value to a const value by replacing variables.
-  replaceASTVariables,
+  replaceVariables,
   // Create a GraphQL Literal AST from a JavaScript input value.
   valueToLiteral,
   // Create a JavaScript input value from a GraphQL Literal AST.

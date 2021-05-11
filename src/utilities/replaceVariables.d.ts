@@ -1,5 +1,4 @@
-import { Maybe } from '../jsutils/Maybe';
-import { ObjMap } from '../jsutils/ObjMap';
+import { VariableValues } from '../execution/values';
 
 import { ValueNode, ConstValueNode } from '../language/ast';
 
@@ -10,7 +9,7 @@ import { ValueNode, ConstValueNode } from '../language/ast';
  * Used primarily to ensure only complete constant values are used during input
  * coercion of custom scalars which accept complex literals.
  */
-export function replaceASTVariables(
+export function replaceVariables(
   valueNode: ValueNode,
-  variables: Maybe<ObjMap<unknown>>,
+  variables: VariableValues,
 ): ConstValueNode;

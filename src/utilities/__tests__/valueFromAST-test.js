@@ -100,9 +100,9 @@ describe('valueFromAST', () => {
     });
 
     expectValueFrom('"value"', graphqlScalar).to.equal('"value"');
-    expectValueFrom('{field: $var}', graphqlScalar, { var: 'value' }).to.equal(
-      '{field: "value"}',
-    );
+    expectValueFrom('{field: $var}', graphqlScalar, '($var: String)', {
+      var: 'value',
+    }).to.equal('{field: "value"}');
 
     const throwScalar = new GraphQLScalarType({
       name: 'ThrowScalar',

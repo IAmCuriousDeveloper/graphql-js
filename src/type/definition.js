@@ -1381,12 +1381,14 @@ export class GraphQLEnumType /* <T> */ {
   }
 
   valueToLiteral(value: mixed): ?ConstValueNode {
-    if (typeof value === 'string') {
-      // https://spec.graphql.org/draft/#Name
-      if (/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(value)) {
-        return { kind: Kind.ENUM, value };
-      }
-      return { kind: Kind.STRING, value };
+    if (typeof value === 'string' && this.getValue(value)) {
+      return { kind: Kind.ENUM, value };
+    }
+  }
+
+  literalToValue(valueNode: ConstValueNode): mixed {
+    if (valueNode.kind === Kind.ENUM && this.getValue(valueNode.value)) {
+      return valueNode.value;
     }
   }
 

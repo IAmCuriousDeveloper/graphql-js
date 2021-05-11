@@ -1,5 +1,5 @@
 import { Maybe } from '../jsutils/Maybe';
-import { ObjMap } from '../jsutils/ObjMap';
+import { ReadOnlyObjMap } from '../jsutils/ObjMap';
 
 import { GraphQLError } from '../error/GraphQLError';
 import {
@@ -10,11 +10,20 @@ import {
 
 import { GraphQLDirective } from '../type/directives';
 import { GraphQLSchema } from '../type/schema';
-import { GraphQLField } from '../type/definition';
+import { GraphQLField, GraphQLInputType } from '../type/definition';
+
+export type VariableValues = {
+  readonly sources: ReadOnlyObjMap<{
+    readonly variable: VariableDefinitionNode;
+    readonly type: GraphQLInputType;
+    readonly value: unknown;
+  }>;
+  readonly coerced: ReadOnlyObjMap<unknown>;
+};
 
 type CoercedVariableValues =
   | { errors: ReadonlyArray<GraphQLError>; coerced?: never }
-  | { errors?: never; coerced: { [key: string]: unknown } };
+  | { errors?: never; coerced: VariableValues };
 
 /**
  * Prepares an object map of variableValues of the correct type based on the
@@ -43,7 +52,7 @@ export function getVariableValues(
 export function getArgumentValues(
   def: GraphQLField<unknown, unknown> | GraphQLDirective,
   node: FieldNode | DirectiveNode,
-  variableValues?: Maybe<ObjMap<unknown>>,
+  variableValues?: Maybe<VariableValues>,
 ): { [key: string]: unknown };
 
 /**
@@ -62,5 +71,5 @@ export function getDirectiveValues(
   node: {
     readonly directives?: ReadonlyArray<DirectiveNode>;
   },
-  variableValues?: Maybe<ObjMap<unknown>>,
+  variableValues?: Maybe<VariableValues>,
 ): undefined | { [key: string]: unknown };

@@ -1,4 +1,4 @@
-import type { ObjMap } from '../jsutils/ObjMap';
+import type { ReadOnlyObjMap } from '../jsutils/ObjMap';
 import { inspect } from '../jsutils/inspect';
 import { invariant } from '../jsutils/invariant';
 import { keyValMap } from '../jsutils/keyValMap';
@@ -24,7 +24,7 @@ import type { ValueNode } from '../language/ast';
  */
 export function valueFromASTUntyped(
   valueNode: ValueNode,
-  variables?: ?ObjMap<mixed>,
+  variables?: ?ReadOnlyObjMap<mixed>,
 ): mixed {
   switch (valueNode.kind) {
     case Kind.NULL:

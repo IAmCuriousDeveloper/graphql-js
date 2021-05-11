@@ -5,7 +5,7 @@ import { Maybe } from '../jsutils/Maybe';
 
 import { PromiseOrValue } from '../jsutils/PromiseOrValue';
 import { Path } from '../jsutils/Path';
-import { ObjMap } from '../jsutils/ObjMap';
+import { ObjMap, ReadOnlyObjMap } from '../jsutils/ObjMap';
 
 import {
   ScalarTypeDefinitionNode,
@@ -345,7 +345,7 @@ export type GraphQLScalarValueParser<TInternal> = (
 ) => Maybe<TInternal>;
 export type GraphQLScalarLiteralParser<TInternal> = (
   valueNode: ValueNode,
-  variables: Maybe<ObjMap<unknown>>,
+  variables: Maybe<ReadOnlyObjMap<unknown>>,
 ) => Maybe<TInternal>;
 
 export interface GraphQLScalarTypeConfig<TInternal, TExternal> {
@@ -487,7 +487,7 @@ export interface GraphQLResolveInfo {
   readonly fragments: ObjMap<FragmentDefinitionNode>;
   readonly rootValue: unknown;
   readonly operation: OperationDefinitionNode;
-  readonly variableValues: { [variableName: string]: unknown };
+  readonly variableValues: ReadOnlyObjMap<unknown>;
 }
 
 /**
@@ -790,7 +790,7 @@ export class GraphQLEnumType {
   parseValue(value: unknown): Maybe<any>;
   parseLiteral(
     valueNode: ValueNode,
-    _variables: Maybe<ObjMap<unknown>>,
+    _variables: Maybe<ReadOnlyObjMap<unknown>>,
   ): Maybe<any>;
 
   toConfig(): GraphQLEnumTypeConfig & {

@@ -1,5 +1,5 @@
 import { Maybe } from '../jsutils/Maybe';
-import { ObjMap } from '../jsutils/ObjMap';
+import { ReadOnlyObjMap } from '../jsutils/ObjMap';
 
 import { ValueNode } from '../language/ast';
 
@@ -21,5 +21,5 @@ import { ValueNode } from '../language/ast';
  */
 export function valueFromASTUntyped(
   valueNode: ValueNode,
-  variables?: Maybe<ObjMap<unknown>>,
+  variables?: Maybe<ReadOnlyObjMap<unknown>>,
 ): unknown;

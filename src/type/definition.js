@@ -641,7 +641,7 @@ export type GraphQLScalarValueParser<TInternal> = (
 
 export type GraphQLScalarLiteralParser<TInternal> = (
   valueNode: ValueNode,
-  variables: ?ObjMap<mixed>,
+  variables: ?ReadOnlyObjMap<mixed>,
 ) => ?TInternal;
 
 export type GraphQLScalarTypeConfig<TInternal, TExternal> = {|
@@ -909,7 +909,7 @@ export type GraphQLResolveInfo = {|
   +fragments: ObjMap<FragmentDefinitionNode>,
   +rootValue: mixed,
   +operation: OperationDefinitionNode,
-  +variableValues: { [variable: string]: mixed, ... },
+  +variableValues: ReadOnlyObjMap<mixed>,
 |};
 
 export type GraphQLFieldConfig<
@@ -1349,7 +1349,10 @@ export class GraphQLEnumType /* <T> */ {
     return enumValue.value;
   }
 
-  parseLiteral(valueNode: ValueNode, _variables: ?ObjMap<mixed>): ?any /* T */ {
+  parseLiteral(
+    valueNode: ValueNode,
+    _variables: ?ReadOnlyObjMap<mixed>,
+  ): ?any /* T */ {
     // Note: variables will be resolved to a value before calling this function.
     if (valueNode.kind !== Kind.ENUM) {
       const valueStr = print(valueNode);

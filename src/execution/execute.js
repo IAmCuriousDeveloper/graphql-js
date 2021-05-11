@@ -60,6 +60,7 @@ import {
 import { typeFromAST } from '../utilities/typeFromAST';
 import { getOperationRootType } from '../utilities/getOperationRootType';
 
+import type { VariableValues } from './values';
 import {
   getVariableValues,
   getArgumentValues,
@@ -98,7 +99,7 @@ export type ExecutionContext = {|
   rootValue: mixed,
   contextValue: mixed,
   operation: OperationDefinitionNode,
-  variableValues: { [variable: string]: mixed, ... },
+  variableValues: VariableValues,
   fieldResolver: GraphQLFieldResolver<any, any>,
   typeResolver: GraphQLTypeResolver<any, any>,
   errors: Array<GraphQLError>,
@@ -679,7 +680,7 @@ export function buildResolveInfo(
     fragments: exeContext.fragments,
     rootValue: exeContext.rootValue,
     operation: exeContext.operation,
-    variableValues: exeContext.variableValues,
+    variableValues: exeContext.variableValues.coerced,
   };
 }
 

@@ -1,11 +1,11 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import type { ObjMap } from '../../jsutils/ObjMap';
+import type { ReadOnlyObjMap } from '../../jsutils/ObjMap';
 import { invariant } from '../../jsutils/invariant';
 import { identityFunc } from '../../jsutils/identityFunc';
 
-import { parseValue } from '../../language/parser';
+import { parseValue, Parser } from '../../language/parser';
 
 import type { GraphQLInputType } from '../../type/definition';
 import {
@@ -22,6 +22,9 @@ import {
   GraphQLEnumType,
   GraphQLInputObjectType,
 } from '../../type/definition';
+import { GraphQLSchema } from '../../type/schema';
+
+import { getVariableValues } from '../../execution/values';
 
 import { valueFromAST } from '../valueFromAST';
 
@@ -29,9 +32,22 @@ describe('valueFromAST', () => {
   function expectValueFrom(
     valueText: string,
     type: GraphQLInputType,
-    variables?: ObjMap<mixed>,
+    variableDefs?: string,
+    variableValues?: ReadOnlyObjMap<mixed>,
   ) {
     const ast = parseValue(valueText);
+    let variables;
+    if (variableValues && variableDefs !== undefined) {
+      const parser = new Parser(variableDefs);
+      parser.expectToken('<SOF>');
+      const coercedVariables = getVariableValues(
+        new GraphQLSchema({}),
+        parser.parseVariableDefinitions(),
+        variableValues,
+      );
+      invariant(coercedVariables.coerced);
+      variables = coercedVariables.coerced;
+    }
     const value = valueFromAST(ast, type, variables);
     return expect(value);
   }
@@ -239,38 +255,43 @@ describe('valueFromAST', () => {
   });
 
   it('accepts variable values assuming already coerced', () => {
-    expectValueFrom('$var', GraphQLBoolean, {}).to.equal(undefined);
-    expectValueFrom('$var', GraphQLBoolean, { var: true }).to.equal(true);
-    expectValueFrom('$var', GraphQLBoolean, { var: null }).to.equal(null);
-    expectValueFrom('$var', nonNullBool, { var: null }).to.equal(undefined);
+    expectValueFrom('$var', GraphQLBoolean).to.equal(undefined);
+    expectValueFrom('$var', GraphQLBoolean, '($var: Boolean)', {
+      var: true,
+    }).to.equal(true);
+    expectValueFrom('$var', GraphQLBoolean, '($var: Boolean)', {
+      var: null,
+    }).to.equal(null);
+    expectValueFrom('$var', nonNullBool, '($var: Boolean)', {
+      var: null,
+    }).to.equal(undefined);
   });
 
   it('asserts variables are provided as items in lists', () => {
-    expectValueFrom('[ $foo ]', listOfBool, {}).to.deep.equal([null]);
-    expectValueFrom('[ $foo ]', listOfNonNullBool, {}).to.equal(undefined);
-    expectValueFrom('[ $foo ]', listOfNonNullBool, {
+    expectValueFrom('[ $foo ]', listOfBool).to.deep.equal([null]);
+    expectValueFrom('[ $foo ]', listOfNonNullBool).to.equal(undefined);
+    expectValueFrom('[ $foo ]', listOfNonNullBool, '($foo: Boolean)', {
       foo: true,
     }).to.deep.equal([true]);
     // Note: variables are expected to have already been coerced, so we
     // do not expect the singleton wrapping behavior for variables.
-    expectValueFrom('$foo', listOfNonNullBool, { foo: true }).to.equal(true);
-    expectValueFrom('$foo', listOfNonNullBool, { foo: [true] }).to.deep.equal([
-      true,
-    ]);
+    expectValueFrom('$foo', listOfNonNullBool, '($foo: Boolean)', {
+      foo: true,
+    }).to.equal(true);
+    expectValueFrom('$foo', listOfNonNullBool, '($foo: [Boolean])', {
+      foo: [true],
+    }).to.deep.equal([true]);
   });
 
   it('omits input object fields for unprovided variables', () => {
     expectValueFrom(
       '{ int: $foo, bool: $foo, requiredBool: true }',
       testInputObj,
-      {},
     ).to.deep.equal({ int: 42, requiredBool: true });
 
-    expectValueFrom('{ requiredBool: $foo }', testInputObj, {}).to.equal(
-      undefined,
-    );
+    expectValueFrom('{ requiredBool: $foo }', testInputObj).to.equal(undefined);
 
-    expectValueFrom('{ requiredBool: $foo }', testInputObj, {
+    expectValueFrom('{ requiredBool: $foo }', testInputObj, '($foo: Boolean)', {
       foo: true,
     }).to.deep.equal({
       int: 42,

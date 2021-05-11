@@ -23,6 +23,8 @@ import {
   GraphQLObjectType,
 } from '../type/definition';
 
+import { VariableValues } from './values';
+
 /**
  * Terminology
  *
@@ -55,7 +57,7 @@ export interface ExecutionContext {
   contextValue: unknown;
   fragments: ObjMap<FragmentDefinitionNode>;
   operation: OperationDefinitionNode;
-  variableValues: { [key: string]: unknown };
+  variableValues: VariableValues;
   fieldResolver: GraphQLFieldResolver<any, any>;
   typeResolver: GraphQLTypeResolver<any, any>;
   errors: Array<GraphQLError>;

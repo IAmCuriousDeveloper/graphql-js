@@ -1,4 +1,3 @@
-import type { ObjMap } from '../jsutils/ObjMap';
 import { keyMap } from '../jsutils/keyMap';
 import { inspect } from '../jsutils/inspect';
 import { invariant } from '../jsutils/invariant';
@@ -13,6 +12,8 @@ import {
   isListType,
   isNonNullType,
 } from '../type/definition';
+
+import type { VariableValues } from '../execution/values';
 
 /**
  * Produces a JavaScript value given a GraphQL Value AST.
@@ -37,7 +38,7 @@ import {
 export function valueFromAST(
   valueNode: ?ValueNode,
   type: GraphQLInputType,
-  variables?: ?ObjMap<mixed>,
+  variables?: ?VariableValues,
 ): mixed | void {
   if (!valueNode) {
     // When there is no node, then there is also no value.
@@ -47,11 +48,11 @@ export function valueFromAST(
 
   if (valueNode.kind === Kind.VARIABLE) {
     const variableName = valueNode.name.value;
-    if (variables == null || variables[variableName] === undefined) {
+    if (variables == null || variables.coerced[variableName] === undefined) {
       // No valid return value.
       return;
     }
-    const variableValue = variables[variableName];
+    const variableValue = variables.coerced[variableName];
     if (variableValue === null && isNonNullType(type)) {
       return; // Invalid: intentionally return no value.
     }
@@ -139,7 +140,7 @@ export function valueFromAST(
     // no value is returned.
     let result;
     try {
-      result = type.parseLiteral(valueNode, variables);
+      result = type.parseLiteral(valueNode, variables?.coerced);
     } catch (_error) {
       return; // Invalid: intentionally return no value.
     }
@@ -157,10 +158,10 @@ export function valueFromAST(
 // in the set of variables.
 function isMissingVariable(
   valueNode: ValueNode,
-  variables: ?ObjMap<mixed>,
+  variables: ?VariableValues,
 ): boolean {
   return (
     valueNode.kind === Kind.VARIABLE &&
-    (variables == null || variables[valueNode.name.value] === undefined)
+    (variables == null || variables.coerced[valueNode.name.value] === undefined)
   );
 }
